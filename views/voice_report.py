@@ -44,7 +44,7 @@ def render() -> None:
             ),
         ],
         note=(
-            "Before you begin: Connect a microphone to your device, "
+            "Connect a microphone to your device, "
             "speak clearly in a quiet environment, and review the "
             "transcript before proceeding."
         ),
