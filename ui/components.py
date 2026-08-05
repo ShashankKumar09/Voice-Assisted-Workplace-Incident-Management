@@ -10,6 +10,21 @@ from typing import Optional
 import streamlit as st
 
 
+
+
+def render_html(html_content):
+    """
+    Render trusted application HTML and CSS.
+    """
+    if html_content is None:
+        return
+
+    st.markdown(
+        str(html_content),
+        unsafe_allow_html=True,
+    )
+
+
 def render_sidebar_brand() -> None:
 
     st.sidebar.markdown(

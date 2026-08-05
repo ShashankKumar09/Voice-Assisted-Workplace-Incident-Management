@@ -10,6 +10,56 @@ from pathlib import Path
 
 import streamlit as st
 
+
+
+# ------------------------------------------------------------------------------
+# HTML rendering compatibility
+# ------------------------------------------------------------------------------
+
+_original_streamlit_code = st.code
+
+def _application_code_renderer(
+    body,
+    language="python",
+    **kwargs,
+):
+    """
+    Render application HTML as HTML while preserving genuine code blocks.
+    """
+
+    body_text = str(body)
+
+    html_tags = (
+        "<div",
+        "<span",
+        "<section",
+        "<article",
+        "<style",
+        "<p",
+        "<h1",
+        "<h2",
+        "<h3",
+        "<br",
+    )
+
+    if any(
+        html_tag in body_text.lower()
+        for html_tag in html_tags
+    ):
+        return st.markdown(
+            body_text,
+            unsafe_allow_html=True,
+        )
+
+    return _original_streamlit_code(
+        body,
+        language=language,
+        **kwargs,
+    )
+
+st.code = _application_code_renderer
+
+
 from core.predictor import IncidentPredictor
 from pages.home import render_home_page
 from pages.voice_reporting import render_voice_reporting_page
