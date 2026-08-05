@@ -1,5 +1,5 @@
 """
-Professional application home page.
+Refined professional application home page.
 """
 
 import streamlit as st
@@ -7,6 +7,7 @@ import streamlit as st
 from ui.components import (
     render_feature_card,
     render_hero,
+    render_intro_strip,
     render_module_card,
     render_section_heading,
     render_workflow,
@@ -30,13 +31,19 @@ def render() -> None:
         ],
     )
 
-    render_section_heading(
-        eyebrow="Application Modules",
-        title="Choose how you want to work",
+    render_intro_strip(
+        title="One connected incident-management workspace",
         description=(
-            "Every module follows the same controlled workflow and produces "
-            "consistent classification, review and reporting outputs."
+            "Select the reporting method that fits the situation. "
+            "Each module uses the same validated classification, decision "
+            "and reporting logic to maintain consistent outcomes."
         ),
+    )
+
+    render_section_heading(
+        title="Choose how you want to work",
+        description="Four focused workflows, one consistent processing framework.",
+        eyebrow=None,
     )
 
     first_row = st.columns(2, gap="large")
