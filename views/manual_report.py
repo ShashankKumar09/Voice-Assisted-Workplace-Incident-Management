@@ -103,73 +103,167 @@ def _prediction_value(
     return prediction["predictions"][task_name]
 
 
+def _decision_display(
+    decision_tier: str,
+) -> tuple[str, str]:
+    if decision_tier == "Auto Fill":
+        return "🟢", "#216B58"
+
+    if decision_tier == "Suggest Review":
+        return "🟡", "#9A6B00"
+
+    return "🔴", "#A83A3A"
+
+
+def _historical_display(
+    historical_status: str,
+) -> tuple[str, str, str]:
+    normalized = historical_status.lower()
+
+    if "strong" in normalized:
+        return "🟢", "Strong Historical Support", "#216B58"
+
+    if "moderate" in normalized:
+        return "🟡", "Moderate Historical Support", "#9A6B00"
+
+    return "🔴", "Limited Historical Support", "#A83A3A"
+
+
+def _render_prediction_card(
+    title: str,
+    label: str,
+    confidence: float,
+) -> None:
+    confidence = max(0.0, min(float(confidence), 100.0))
+
+    st.html(
+        f"""
+        <div style="
+            min-height:220px; padding:1.25rem; border-radius:18px;
+            border:1px solid #DCE6ED; background:linear-gradient(180deg,#FFFFFF 0%,#F8FBFD 100%);
+            box-shadow:0 8px 22px rgba(26,58,79,0.06);
+        ">
+            <div style="color:#6A7F8F;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;">
+                {title}
+            </div>
+            <div style="min-height:72px;margin-top:.75rem;color:#17324D;font-size:1.15rem;line-height:1.35;font-weight:800;">
+                {label}
+            </div>
+            <div style="height:9px;margin-top:1rem;border-radius:999px;overflow:hidden;background:#E7EEF2;">
+                <div style="width:{confidence:.2f}%;height:100%;border-radius:999px;background:linear-gradient(90deg,#1F6A86,#2B8BA5);"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;gap:.5rem;margin-top:.65rem;">
+                <span style="color:#2B7897;font-size:.82rem;font-weight:800;">{confidence:.2f}%</span>
+                <span style="color:#7C8E9A;font-size:.73rem;">Confidence</span>
+            </div>
+        </div>
+        """
+    )
+
+
+def _render_summary_card(
+    label: str,
+    value: str,
+    caption: str,
+    value_color: str = "#17324D",
+) -> None:
+    st.html(
+        f"""
+        <div style="
+            min-height:148px; padding:1.2rem 1.25rem; border-radius:18px;
+            border:1px solid #DCE6ED; background:#FFFFFF;
+            box-shadow:0 8px 22px rgba(26,58,79,0.06);
+        ">
+            <div style="color:#6A7F8F;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;">
+                {label}
+            </div>
+            <div style="margin-top:.65rem;color:{value_color};font-size:1.32rem;line-height:1.3;font-weight:850;">
+                {value}
+            </div>
+            <div style="margin-top:.45rem;color:#7C8E9A;font-size:.75rem;line-height:1.45;">
+                {caption}
+            </div>
+        </div>
+        """
+    )
+
+
 def render_prediction_results(
     prediction: Dict[str, Any],
     report_package: Dict[str, Any],
 ) -> None:
-    st.success("Incident classification completed successfully.")
+    st.success(
+        "Classification completed successfully. "
+        "Review the predicted categories before downloading the report."
+    )
 
-    st.markdown("### Classification Results")
+    st.markdown("## Classification Results")
 
-    columns = st.columns(4, gap="medium")
+    prediction_columns = st.columns(4, gap="medium")
 
-    for column, task_name, label in zip(
-        columns,
-        ["nature", "body", "event", "source"],
-        ["Nature", "Part of Body", "Event", "Source"],
+    task_configuration = [
+        ("nature", "Nature"),
+        ("body", "Part of Body"),
+        ("event", "Event"),
+        ("source", "Source"),
+    ]
+
+    for column, (task_name, display_name) in zip(
+        prediction_columns,
+        task_configuration,
     ):
-        result = _prediction_value(
-            prediction,
-            task_name,
-        )
+        task_result = _prediction_value(prediction, task_name)
 
         with column:
-            st.metric(
-                label=label,
-                value=str(result["label"]),
-                delta=(
-                    f'{float(result["confidence_percent"]):.2f}% confidence'
-                ),
-                delta_color="off",
+            _render_prediction_card(
+                title=display_name,
+                label=str(task_result["label"]),
+                confidence=float(task_result["confidence_percent"]),
             )
 
     overall_confidence = float(
         prediction["incident_confidence"]["geometric_mean_percent"]
     )
 
-    decision_tier = str(
-        prediction["decision"]["tier"]
+    decision_tier = str(prediction["decision"]["tier"])
+    relationship = prediction["relationship_validation"]
+    historical_status = str(relationship["historical_validation_status"])
+
+    decision_icon, decision_color = _decision_display(decision_tier)
+    historical_icon, historical_label, historical_color = _historical_display(
+        historical_status
     )
 
-    relationship = prediction[
-        "relationship_validation"
-    ]
+    st.markdown("")
+    st.markdown("### Decision Summary")
 
     summary_columns = st.columns(3, gap="medium")
 
-    summary_columns[0].metric(
-        "Overall Confidence",
-        f"{overall_confidence:.2f}%",
-    )
+    with summary_columns[0]:
+        _render_summary_card(
+            label="Overall Confidence",
+            value=f"{overall_confidence:.2f}%",
+            caption="Geometric mean across Nature, Body, Event and Source.",
+        )
 
-    summary_columns[1].metric(
-        "Decision Tier",
-        decision_tier,
-    )
+    with summary_columns[1]:
+        _render_summary_card(
+            label="Decision Tier",
+            value=f"{decision_icon} {decision_tier}",
+            caption="Final routing based on the configured confidence thresholds.",
+            value_color=decision_color,
+        )
 
-    summary_columns[2].metric(
-        "Historical Validation",
-        str(
-            relationship[
-                "historical_validation_status"
-            ]
-        ),
-    )
+    with summary_columns[2]:
+        _render_summary_card(
+            label="Historical Validation",
+            value=f"{historical_icon} {historical_label}",
+            caption="Support observed across historical category relationships.",
+            value_color=historical_color,
+        )
 
-    with st.expander(
-        "Historical Validation Details"
-    ):
-        st.write(
+    with st.expander("Historical Validation Details", expanded=False):
+        st.info(
             relationship.get(
                 "message",
                 "Historical relationship validation completed.",
@@ -185,22 +279,10 @@ def render_prediction_results(
                     "Weakest Relationship Score",
                 ],
                 "Value": [
-                    relationship.get(
-                        "historical_validation_status",
-                        "",
-                    ),
-                    relationship.get(
-                        "consistency_score",
-                        "",
-                    ),
-                    relationship.get(
-                        "weakest_relationship",
-                        "",
-                    ),
-                    relationship.get(
-                        "weakest_relationship_score",
-                        "",
-                    ),
+                    relationship.get("historical_validation_status", ""),
+                    relationship.get("consistency_score", ""),
+                    relationship.get("weakest_relationship", ""),
+                    relationship.get("weakest_relationship_score", ""),
                 ],
             }
         )
@@ -211,13 +293,15 @@ def render_prediction_results(
             use_container_width=True,
         )
 
-    st.markdown("### Download Completed Report")
+    st.markdown("---")
+    st.markdown("## Download Completed Report")
+    st.caption("Download the classified incident record in PDF or CSV format.")
 
     download_columns = st.columns(2, gap="medium")
 
     with download_columns[0]:
         st.download_button(
-            "Download PDF Report",
+            "📄 Download PDF Report",
             data=report_package["pdf_bytes"],
             file_name=report_package["pdf_filename"],
             mime="application/pdf",
@@ -226,13 +310,12 @@ def render_prediction_results(
 
     with download_columns[1]:
         st.download_button(
-            "Download CSV Record",
+            "📊 Download CSV Record",
             data=report_package["csv_bytes"],
             file_name=report_package["csv_filename"],
             mime="text/csv",
             use_container_width=True,
         )
-
 
 def render() -> None:
     render_module_header(
