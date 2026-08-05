@@ -1,0 +1,13 @@
+{
+    "confidence_signal": "Geometric_Mean_Confidence",
+    "auto_fill_rule": "Geometric_Mean_Confidence >= 0.85",
+    "suggest_review_rule": "0.7 <= Geometric_Mean_Confidence < 0.85",
+    "manual_review_rule": "Geometric_Mean_Confidence < 0.7",
+    "auto_fill_threshold": 0.85,
+    "suggest_review_threshold": 0.7,
+    "relationship_low_threshold": 0.1054018354634427,
+    "relationship_high_threshold": 0.2546071629752791,
+    "relationship_usage": "Secondary explainability and safety flag only. It does not override the confidence-based decision.",
+    "threshold_selection_dataset": "Four-active-target validation records only",
+    "thresholds_frozen": true
+}

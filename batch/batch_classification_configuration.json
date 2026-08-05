@@ -1,0 +1,74 @@
+{
+    "classification_input_column": "Final Narrative",
+    "required_input_columns": [
+        "ID",
+        "UPA",
+        "EventDate",
+        "Employer",
+        "Address1",
+        "Address2",
+        "City",
+        "State",
+        "Zip",
+        "Latitude",
+        "Longitude",
+        "Primary NAICS",
+        "Hospitalized",
+        "Amputation",
+        "Loss of Eye",
+        "Inspection",
+        "FederalState",
+        "Final Narrative"
+    ],
+    "prediction_output_columns": [
+        "Nature Predicted Label",
+        "Nature Label ID",
+        "Nature Confidence (%)",
+        "Body Predicted Label",
+        "Body Label ID",
+        "Body Confidence (%)",
+        "Event Predicted Label",
+        "Event Label ID",
+        "Event Confidence (%)",
+        "Source Predicted Label",
+        "Source Label ID",
+        "Source Confidence (%)",
+        "Geometric Mean Confidence (%)",
+        "Minimum Task Confidence (%)",
+        "Mean Task Confidence (%)",
+        "Decision",
+        "Relationship Score",
+        "Relationship Flag",
+        "Weakest Relationship",
+        "Weakest Relationship Score",
+        "Token Count",
+        "Narrative Truncated",
+        "Inference Time (ms)",
+        "Processing Status",
+        "Processing Error"
+    ],
+    "preserve_original_columns": true,
+    "preserve_additional_columns": true,
+    "partial_batch_processing": true,
+    "invalid_rows_classified": false,
+    "continue_after_model_error": true,
+    "supported_download_formats": [
+        "CSV",
+        "Excel"
+    ],
+    "excel_sheets": [
+        "Classified Incidents",
+        "Processing Summary",
+        "Validation Details"
+    ],
+    "decision_values": [
+        "Auto Fill",
+        "Suggest Review",
+        "Manual Review"
+    ],
+    "relationship_flags": [
+        "Low",
+        "Medium",
+        "High"
+    ]
+}

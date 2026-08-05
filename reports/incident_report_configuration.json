@@ -1,0 +1,55 @@
+{
+    "supported_reporting_channels": [
+        "Voice Incident Reporting",
+        "Manual Incident Reporting"
+    ],
+    "download_formats": [
+        "PDF",
+        "CSV"
+    ],
+    "input_fields": [
+        "ID",
+        "UPA",
+        "EventDate",
+        "Employer",
+        "Address1",
+        "Address2",
+        "City",
+        "State",
+        "Zip",
+        "Latitude",
+        "Longitude",
+        "Primary NAICS",
+        "Hospitalized",
+        "Amputation",
+        "Loss of Eye",
+        "Inspection",
+        "FederalState",
+        "Final Narrative"
+    ],
+    "pdf_sections": [
+        "Incident Information",
+        "Final Narrative",
+        "Classification Results",
+        "Overall Confidence",
+        "Decision Tier",
+        "Historical Validation",
+        "Decision Tier - Final Conclusion",
+        "Important Notice"
+    ],
+    "csv_content": "Original 18 incident fields plus predictions, confidence, decision, relationship and processing fields.",
+    "pdf_page_size": "A4",
+    "pdf_page_count": 2,
+    "historical_validation_definition": "Checks whether the four predicted classifications have been observed together in historical workplace incident records. It does not change the classifications or the Decision Tier.",
+    "decision_tier_definition": "The final business outcome determined by the frozen confidence thresholds.",
+    "historical_status_labels": {
+        "High": "Strong Historical Support",
+        "Medium": "Moderate Historical Support",
+        "Low": "Limited Historical Support"
+    },
+    "processing_summary_page_included": false,
+    "streamlit_usage": {
+        "pdf_button": "Download PDF Report",
+        "csv_button": "Download CSV Record"
+    }
+}

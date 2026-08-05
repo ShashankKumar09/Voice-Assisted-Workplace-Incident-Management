@@ -1,0 +1,67 @@
+{
+    "classes_per_head": 50,
+    "matrix_type": "Symmetric compatibility score",
+    "compatibility_definition": "Geometric mean of P(right|left) and P(left|right)",
+    "pairs": {
+        "nature_body": {
+            "left_task": "nature",
+            "right_task": "body",
+            "matrix_shape": [
+                50,
+                50
+            ],
+            "observed_pairs": 811,
+            "maximum_pair_support": 7214
+        },
+        "nature_event": {
+            "left_task": "nature",
+            "right_task": "event",
+            "matrix_shape": [
+                50,
+                50
+            ],
+            "observed_pairs": 857,
+            "maximum_pair_support": 3461
+        },
+        "nature_source": {
+            "left_task": "nature",
+            "right_task": "source",
+            "matrix_shape": [
+                50,
+                50
+            ],
+            "observed_pairs": 970,
+            "maximum_pair_support": 2397
+        },
+        "body_event": {
+            "left_task": "body",
+            "right_task": "event",
+            "matrix_shape": [
+                50,
+                50
+            ],
+            "observed_pairs": 1531,
+            "maximum_pair_support": 1523
+        },
+        "body_source": {
+            "left_task": "body",
+            "right_task": "source",
+            "matrix_shape": [
+                50,
+                50
+            ],
+            "observed_pairs": 1573,
+            "maximum_pair_support": 1524
+        },
+        "event_source": {
+            "left_task": "event",
+            "right_task": "source",
+            "matrix_shape": [
+                50,
+                50
+            ],
+            "observed_pairs": 689,
+            "maximum_pair_support": 1528
+        }
+    }
+}

@@ -1,0 +1,63 @@
+{
+    "template_name": "Workplace Incident Batch Classification Template",
+    "required_columns": [
+        "ID",
+        "UPA",
+        "EventDate",
+        "Employer",
+        "Address1",
+        "Address2",
+        "City",
+        "State",
+        "Zip",
+        "Latitude",
+        "Longitude",
+        "Primary NAICS",
+        "Hospitalized",
+        "Amputation",
+        "Loss of Eye",
+        "Inspection",
+        "FederalState",
+        "Final Narrative"
+    ],
+    "number_of_columns": 18,
+    "classification_input_column": "Final Narrative",
+    "required_non_empty_columns": [
+        "ID",
+        "Final Narrative"
+    ],
+    "recommended_non_empty_columns": [
+        "UPA",
+        "EventDate",
+        "Employer"
+    ],
+    "yes_no_columns": [
+        "Hospitalized",
+        "Amputation",
+        "Loss of Eye"
+    ],
+    "yes_no_allowed_values": [
+        "Yes",
+        "No",
+        "Y",
+        "N",
+        "1",
+        "0",
+        "True",
+        "False"
+    ],
+    "numeric_columns": [
+        "Latitude",
+        "Longitude"
+    ],
+    "date_columns": [
+        "EventDate"
+    ],
+    "preserve_original_columns": true,
+    "append_prediction_columns": true,
+    "maximum_batch_records": 5000,
+    "accepted_upload_formats": [
+        ".csv",
+        ".xlsx"
+    ]
+}

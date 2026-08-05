@@ -1,0 +1,60 @@
+{
+    "required_columns": [
+        "ID",
+        "UPA",
+        "EventDate",
+        "Employer",
+        "Address1",
+        "Address2",
+        "City",
+        "State",
+        "Zip",
+        "Latitude",
+        "Longitude",
+        "Primary NAICS",
+        "Hospitalized",
+        "Amputation",
+        "Loss of Eye",
+        "Inspection",
+        "FederalState",
+        "Final Narrative"
+    ],
+    "required_non_empty_columns": [
+        "ID",
+        "Final Narrative"
+    ],
+    "maximum_batch_records": 5000,
+    "minimum_narrative_characters": 15,
+    "minimum_narrative_words": 4,
+    "yes_no_columns": [
+        "Hospitalized",
+        "Amputation",
+        "Loss of Eye"
+    ],
+    "accepted_yes_values": [
+        "1",
+        "true",
+        "y",
+        "yes"
+    ],
+    "accepted_no_values": [
+        "0",
+        "false",
+        "n",
+        "no"
+    ],
+    "federal_state_allowed_values": [
+        "federal",
+        "state"
+    ],
+    "latitude_range": [
+        -90.0,
+        90.0
+    ],
+    "longitude_range": [
+        -180.0,
+        180.0
+    ],
+    "classification_rule": "Only records with Validation Status = 'Ready for Classification' are sent to the model.",
+    "invalid_row_handling": "Invalid rows remain in the output with row-level validation errors and are not classified."
+}

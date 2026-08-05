@@ -1,0 +1,218 @@
+{
+    "application_name": "Voice-Assisted Workplace Incident Management System",
+    "application_version": "1.0.0",
+    "deployment_framework": "Streamlit",
+    "modules": [
+        "Voice Incident Reporting",
+        "Manual Incident Reporting",
+        "Batch Incident Processing",
+        "Safety Analytics Dashboard"
+    ],
+    "input_fields": [
+        "ID",
+        "UPA",
+        "EventDate",
+        "Employer",
+        "Address1",
+        "Address2",
+        "City",
+        "State",
+        "Zip",
+        "Latitude",
+        "Longitude",
+        "Primary NAICS",
+        "Hospitalized",
+        "Amputation",
+        "Loss of Eye",
+        "Inspection",
+        "FederalState",
+        "Final Narrative"
+    ],
+    "classification_heads": [
+        "Nature",
+        "Body",
+        "Event",
+        "Source"
+    ],
+    "decision_tiers": [
+        "Auto Fill",
+        "Suggest Review",
+        "Manual Review"
+    ],
+    "historical_validation_labels": [
+        "Strong Historical Support",
+        "Moderate Historical Support",
+        "Limited Historical Support"
+    ],
+    "downloads": {
+        "voice_reporting": [
+            "PDF",
+            "CSV"
+        ],
+        "manual_reporting": [
+            "PDF",
+            "CSV"
+        ],
+        "batch_processing": [
+            "CSV",
+            "Excel"
+        ],
+        "analytics_dashboard": [
+            "PDF",
+            "CSV",
+            "Chart Images"
+        ]
+    },
+    "dashboard_date_features": [
+        "Date Range",
+        "Year",
+        "Quarter",
+        "Month"
+    ],
+    "dashboard_filters": [
+        "Employer",
+        "City",
+        "State",
+        "Nature",
+        "Body",
+        "Event",
+        "Source",
+        "Decision",
+        "Historical Validation"
+    ],
+    "maximum_batch_records": 5000,
+    "public_about_page": false,
+    "phase_13_1": {
+        "status": "completed",
+        "application_shell": true,
+        "professional_home_page": true,
+        "sidebar_navigation": true,
+        "module_placeholders": [
+            "Voice Incident Reporting",
+            "Manual Incident Reporting",
+            "Batch Incident Processing",
+            "Safety Analytics Dashboard"
+        ],
+        "model_loading_strategy": "Lazy loading with Streamlit cache_resource. The model is not loaded on the Home page.",
+        "ui_theme": "Professional enterprise safety application"
+    },
+    "phase_13_2": {
+        "status": "completed",
+        "module": "Voice Incident Reporting",
+        "guided_fields": 18,
+        "microphone": "Native Streamlit audio_input",
+        "speech_to_text": "faster-whisper tiny.en on CPU INT8",
+        "editable_transcript": true,
+        "field_confirmation": true,
+        "final_review": true,
+        "classification": true,
+        "historical_validation": true,
+        "downloads": [
+            "PDF",
+            "CSV"
+        ],
+        "persistent_incident_store": true
+    },
+    "phase_13_3": {
+        "status": "completed",
+        "module": "Manual Incident Reporting",
+        "input_fields": 18,
+        "structured_form": true,
+        "required_fields": [
+            "ID",
+            "Final Narrative"
+        ],
+        "input_validation": true,
+        "final_review": true,
+        "classification": true,
+        "historical_validation": true,
+        "decision_tier": true,
+        "downloads": [
+            "PDF",
+            "CSV"
+        ],
+        "persistent_incident_store": true
+    },
+    "phase_13_4": {
+        "status": "completed",
+        "module": "Batch Incident Processing",
+        "template_downloads": [
+            "CSV",
+            "Excel",
+            "Example CSV"
+        ],
+        "supported_uploads": [
+            "CSV",
+            "Excel"
+        ],
+        "maximum_batch_records": 5000,
+        "automatic_validation": true,
+        "row_level_validation": true,
+        "partial_batch_processing": true,
+        "valid_rows_only_classified": true,
+        "classification": true,
+        "decision_tier": true,
+        "historical_validation": true,
+        "downloads": [
+            "Classified CSV",
+            "Classified Excel",
+            "Processing Summary CSV"
+        ],
+        "persistent_incident_store": true
+    },
+    "phase_13_5": {
+        "status": "completed",
+        "module": "Safety Analytics Dashboard",
+        "filters": [
+            "Event Date Range",
+            "Year",
+            "Quarter",
+            "Month",
+            "Employer",
+            "State",
+            "City",
+            "Reporting Channel",
+            "Nature",
+            "Body",
+            "Event",
+            "Source",
+            "Decision Tier",
+            "Historical Validation",
+            "Overall Confidence",
+            "Incident Search"
+        ],
+        "executive_kpis": [
+            "Total Incidents",
+            "Auto Fill",
+            "Suggest Review",
+            "Manual Review",
+            "Average Confidence",
+            "Average Historical Score",
+            "Strong Historical Support",
+            "Unique Employers",
+            "Unique States"
+        ],
+        "charts": [
+            "Incident Trend by Month",
+            "Decision Tier Distribution",
+            "Nature Distribution",
+            "Body Distribution",
+            "Event Distribution",
+            "Source Distribution",
+            "Historical Validation Distribution",
+            "Employer Distribution",
+            "State Distribution"
+        ],
+        "downloads": [
+            "Filtered CSV",
+            "Analytics Excel",
+            "Executive PDF"
+        ],
+        "dynamic_data_store": true,
+        "updates_from": [
+            "Voice Incident Reporting",
+            "Manual Incident Reporting",
+            "Batch Incident Processing"
+        ]
+    }
+}

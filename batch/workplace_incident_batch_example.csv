@@ -1,0 +1,2 @@
+ID,UPA,EventDate,Employer,Address1,Address2,City,State,Zip,Latitude,Longitude,Primary NAICS,Hospitalized,Amputation,Loss of Eye,Inspection,FederalState,Final Narrative
+INC-1001,UPA-2501,2026-08-05,ABC Manufacturing,100 Industrial Road,,Bengaluru,Karnataka,560001,12.9716,77.5946,332710,Yes,No,No,INS-45021,State,"An employee slipped on a wet floor, fell on the same level, and fractured the left ankle."

@@ -1,0 +1,68 @@
+{
+    "project": "Voice-Assisted Workplace Incident Management System",
+    "deployment_target": "Streamlit",
+    "model_architecture": "Shared DeBERTa-v3-small encoder with four Top-50 classification heads",
+    "model_name": "microsoft/deberta-v3-small",
+    "checkpoint_epoch": 8,
+    "tasks": [
+        "nature",
+        "body",
+        "event",
+        "source"
+    ],
+    "classes_per_head": 50,
+    "maximum_sequence_length": 96,
+    "confidence_signal": "Geometric_Mean_Confidence",
+    "auto_fill_threshold": 0.85,
+    "suggest_review_threshold": 0.7,
+    "relationship_low_threshold": 0.1054018354634427,
+    "relationship_high_threshold": 0.2546071629752791,
+    "relationship_usage": "Secondary explainability flag; does not override decision routing",
+    "files": [
+        {
+            "relative_path": "model/multitask_deberta_inference_state.pt",
+            "size_mb": 539.665,
+            "sha256": "e7b4600665b4393fa1a451c2eebd8d2e7ae8f551fe4b223424941422c41b8d84"
+        },
+        {
+            "relative_path": "label_mappings/top50_label_mappings.json",
+            "size_mb": 0.021,
+            "sha256": "8e5882932ee678315a19becf5001d532051fe9b67374abbc3056e1b962792a45"
+        },
+        {
+            "relative_path": "relationship_assets/pairwise_compatibility_matrices.npz",
+            "size_mb": 0.064,
+            "sha256": "0d844d0334e2207d1393efe7bb235ab75948c08d02ae03c73edca7d1fbf4b9c1"
+        },
+        {
+            "relative_path": "relationship_assets/relationship_metadata.json",
+            "size_mb": 0.002,
+            "sha256": "905fced79b6308e516b1c3963b0a1345ac96debe1a3e5d445439fcf96a3dabdd"
+        },
+        {
+            "relative_path": "configuration/frozen_decision_engine.json",
+            "size_mb": 0.001,
+            "sha256": "3253b400cafe75242485c9fc4cd4dd44b27941cec2b3e1c9836937cca3342101"
+        },
+        {
+            "relative_path": "configuration/multitask_model_configuration.json",
+            "size_mb": 0.001,
+            "sha256": "95945b7329bb9a2cc6b2a143dd9ad98a65d7eea72f71450deb301a4ad4c66bfd"
+        },
+        {
+            "relative_path": "model/config.json",
+            "size_mb": 0.001,
+            "sha256": "ee2fd07df51d701deddd9bd896b5b93b4124e05a9df127394b5526a3161d3ce0"
+        },
+        {
+            "relative_path": "tokenizer/tokenizer.json",
+            "size_mb": 7.953,
+            "sha256": "3bd1f6a24a2c99354b5f36e826e877d92d01a80dc24c3c5b74d31aaf87637e4e"
+        },
+        {
+            "relative_path": "tokenizer/tokenizer_config.json",
+            "size_mb": 0.0,
+            "sha256": "7931febe14783fb3e26ca14599a0fee4faac0284b7f94094e559d0bbcd8bfe3d"
+        }
+    ]
+}
