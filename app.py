@@ -10,6 +10,79 @@ from pathlib import Path
 
 import streamlit as st
 
+
+
+# ------------------------------------------------------------------------------
+# Multiline HTML rendering compatibility
+# ------------------------------------------------------------------------------
+
+from textwrap import dedent
+from streamlit.delta_generator import DeltaGenerator
+
+_original_streamlit_markdown = st.markdown
+_original_delta_markdown = DeltaGenerator.markdown
+
+
+def _prepare_html_body(
+    body,
+    unsafe_allow_html=False,
+):
+    """
+    Remove Python indentation from trusted multiline HTML.
+
+    Markdown treats four leading spaces as a code block. Dedenting prevents
+    application HTML from being displayed as raw source code.
+    """
+
+    if (
+        unsafe_allow_html
+        and isinstance(body, str)
+    ):
+        body = dedent(body).strip()
+
+    return body
+
+
+def _safe_streamlit_markdown(
+    body,
+    unsafe_allow_html=False,
+    **kwargs,
+):
+    body = _prepare_html_body(
+        body,
+        unsafe_allow_html,
+    )
+
+    return _original_streamlit_markdown(
+        body,
+        unsafe_allow_html=unsafe_allow_html,
+        **kwargs,
+    )
+
+
+def _safe_delta_markdown(
+    self,
+    body,
+    unsafe_allow_html=False,
+    **kwargs,
+):
+    body = _prepare_html_body(
+        body,
+        unsafe_allow_html,
+    )
+
+    return _original_delta_markdown(
+        self,
+        body,
+        unsafe_allow_html=unsafe_allow_html,
+        **kwargs,
+    )
+
+
+st.markdown = _safe_streamlit_markdown
+DeltaGenerator.markdown = _safe_delta_markdown
+
+
 # ------------------------------------------------------------------------------
 # Trusted HTML rendering compatibility
 # ------------------------------------------------------------------------------
