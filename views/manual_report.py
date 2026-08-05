@@ -1,18 +1,28 @@
 """
-Manual Incident Reporting
+Manual Incident Reporting page.
 """
 
-import streamlit as st
-
-from ui.components import render_hero
+from ui.guide_components import (
+    render_backend_placeholder,
+    render_module_header,
+    render_user_guide,
+)
 
 
 def render() -> None:
-    render_hero(
-        eyebrow="Application Module",
-        title="Manual Incident Reporting",
-        subtitle="The clean manual reporting workflow will be rebuilt next.",
+    render_module_header(
+        eyebrow='Structured Incident Entry',
+        title='Manual Incident Reporting',
+        description='Enter workplace incident details through a structured form, validate the information and generate a classified incident report.',
+        icon='📝',
     )
-    st.info(
-        "This module is intentionally isolated while the clean application shell is validated."
+
+    render_user_guide(
+        steps=[('Open a new incident form', 'Begin a structured single-incident report.'), ('Complete the incident fields', 'Enter identification, employer, location and outcome details.'), ('Write the final narrative', 'Describe the activity, event, injury, body part and source.'), ('Review and validate', 'Correct missing or invalid values before submission.'), ('Classify and download', 'Review predictions, confidence, decision tier and report files.')],
+        note='The Final Narrative should be complete and specific because it is the primary input used for classification.',
+    )
+
+    render_backend_placeholder(
+        title='Manual form integration is next',
+        description='The validated 18-field form, predictor, decision engine and PDF/CSV downloads will be connected in the next implementation step.',
     )
