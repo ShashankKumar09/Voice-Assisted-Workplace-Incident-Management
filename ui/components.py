@@ -3,7 +3,7 @@ Reusable native Streamlit UI components.
 """
 
 from html import escape
-from typing import Iterable
+from typing import Iterable, Optional
 
 import streamlit as st
 
@@ -53,15 +53,38 @@ def render_hero(
     )
 
 
-def render_section_heading(
-    eyebrow: str,
+def render_intro_strip(
     title: str,
     description: str,
 ) -> None:
     st.html(
         f"""
+        <div class="intro-strip">
+            <div class="intro-strip-mark">●</div>
+            <div>
+                <div class="intro-strip-title">{escape(title)}</div>
+                <div class="intro-strip-description">{escape(description)}</div>
+            </div>
+        </div>
+        """
+    )
+
+
+def render_section_heading(
+    title: str,
+    description: str,
+    eyebrow: Optional[str] = None,
+) -> None:
+    eyebrow_html = (
+        f'<div class="section-eyebrow">{escape(eyebrow)}</div>'
+        if eyebrow
+        else ""
+    )
+
+    st.html(
+        f"""
         <div class="section-heading">
-            <div class="section-eyebrow">{escape(eyebrow)}</div>
+            {eyebrow_html}
             <div class="section-title">{escape(title)}</div>
             <div class="section-description">{escape(description)}</div>
         </div>
@@ -144,7 +167,6 @@ def render_workflow(
     )
 
 
-# Kept for compatibility with existing placeholder views.
 def render_status_card(
     label: str,
     value: str,
