@@ -384,7 +384,7 @@ class IncidentPredictor:
 
         self.tokenizer = AutoTokenizer.from_pretrained(
             str(self.tokenizer_dir),
-            use_fast=False,
+            use_fast=True,
             local_files_only=True,
         )
 
