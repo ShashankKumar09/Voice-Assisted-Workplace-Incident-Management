@@ -11,53 +11,61 @@ from pathlib import Path
 import streamlit as st
 
 
-
 # ------------------------------------------------------------------------------
-# HTML rendering compatibility
+# Streamlit HTML indentation compatibility
 # ------------------------------------------------------------------------------
 
-_original_streamlit_code = st.code
+from textwrap import dedent
+from streamlit.delta_generator import DeltaGenerator
 
-def _application_code_renderer(
+_original_delta_markdown = DeltaGenerator.markdown
+
+
+def _dedented_markdown(
+    self,
     body,
-    language="python",
+    unsafe_allow_html=False,
     **kwargs,
 ):
     """
-    Render application HTML as HTML while preserving genuine code blocks.
+    Remove Python indentation from trusted multiline HTML before Streamlit
+    processes it as Markdown.
+
+    Without dedent(), indented HTML is interpreted as a Markdown code block.
     """
 
-    body_text = str(body)
+    if unsafe_allow_html and isinstance(body, str):
 
-    html_tags = (
-        "<div",
-        "<span",
-        "<section",
-        "<article",
-        "<style",
-        "<p",
-        "<h1",
-        "<h2",
-        "<h3",
-        "<br",
-    )
-
-    if any(
-        html_tag in body_text.lower()
-        for html_tag in html_tags
-    ):
-        return st.markdown(
-            body_text,
-            unsafe_allow_html=True,
+        html_markers = (
+            "<div",
+            "<span",
+            "<section",
+            "<article",
+            "<style",
+            "<p",
+            "<h1",
+            "<h2",
+            "<h3",
+            "<br",
         )
 
-    return _original_streamlit_code(
+        body_lower = body.lower()
+
+        if any(
+            marker in body_lower
+            for marker in html_markers
+        ):
+            body = dedent(body).strip()
+
+    return _original_delta_markdown(
+        self,
         body,
-        language=language,
+        unsafe_allow_html=unsafe_allow_html,
         **kwargs,
     )
 
-st.code = _application_code_renderer
+
+DeltaGenerator.markdown = _dedented_markdown
 
 
 from core.predictor import IncidentPredictor

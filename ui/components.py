@@ -5,6 +5,7 @@ Reusable UI components for the Streamlit application.
 from __future__ import annotations
 
 from html import escape
+from textwrap import dedent
 from typing import Optional
 
 import streamlit as st
@@ -20,7 +21,7 @@ def render_html(html_content):
         return
 
     st.markdown(
-        str(html_content),
+        dedent(str(html_content)).strip(),
         unsafe_allow_html=True,
     )
 
