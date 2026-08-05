@@ -1,18 +1,28 @@
 """
-Voice Incident Reporting
+Voice Incident Reporting page.
 """
 
-import streamlit as st
-
-from ui.components import render_hero
+from ui.guide_components import (
+    render_backend_placeholder,
+    render_module_header,
+    render_user_guide,
+)
 
 
 def render() -> None:
-    render_hero(
-        eyebrow="Application Module",
-        title="Voice Incident Reporting",
-        subtitle="The guided voice workflow will be rebuilt after the manual module is stable.",
+    render_module_header(
+        eyebrow='Guided Incident Capture',
+        title='Voice Incident Reporting',
+        description='Record incident details one field at a time, review the recognized text and submit the completed narrative for classification.',
+        icon='🎤',
     )
-    st.info(
-        "This module is intentionally isolated while the clean application shell is validated."
+
+    render_user_guide(
+        steps=[('Start a new report', 'Open the module and begin the guided reporting workflow.'), ('Record each response', 'Use the microphone to answer one incident question at a time.'), ('Review the transcript', 'Correct any speech-to-text errors before confirming the field.'), ('Complete the final review', 'Verify all incident details and the final narrative.'), ('Classify and download', 'Run classification, review the decision tier and download the report.')],
+        note='Use a quiet environment, speak clearly and review every transcript before continuing.',
+    )
+
+    render_backend_placeholder(
+        title='Voice workflow integration is next',
+        description='The microphone, speech recognition, classification and report-generation services will be connected after the user-guide layer is approved.',
     )
