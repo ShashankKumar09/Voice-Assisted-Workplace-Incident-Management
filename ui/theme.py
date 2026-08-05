@@ -142,7 +142,7 @@ body,
 .app-title {
     max-width: 980px;
     margin-top: 1.05rem;
-    font-size: clamp(2.2rem, 3.8vw, 4rem);
+    font-size: clamp(2rem, 3.35vw, 3.55rem);
     line-height: 1.04;
     letter-spacing: -0.045em;
     font-weight: 850;
@@ -152,8 +152,8 @@ body,
     max-width: 860px;
     margin-top: 1.1rem;
     color: rgba(255,255,255,0.82);
-    font-size: 1.03rem;
-    line-height: 1.75;
+    font-size: 1.08rem;
+    line-height: 1.72;
 }
 
 .hero-badge-row {
@@ -199,9 +199,43 @@ body,
     text-transform: uppercase;
 }
 
+
+.intro-strip {
+    display: grid;
+    grid-template-columns: 12px minmax(0, 1fr);
+    gap: 0.85rem;
+    align-items: start;
+    margin: -1.15rem 0 2.2rem 0;
+    padding: 1.15rem 1.35rem;
+    border-radius: 18px;
+    border: 1px solid #D7E5EC;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 9px 24px rgba(26, 58, 79, 0.06);
+}
+
+.intro-strip-mark {
+    color: #2B8BA5;
+    font-size: 0.72rem;
+    line-height: 1.8;
+}
+
+.intro-strip-title {
+    color: var(--ink);
+    font-size: 0.98rem;
+    font-weight: 820;
+}
+
+.intro-strip-description {
+    max-width: 980px;
+    margin-top: 0.28rem;
+    color: var(--muted);
+    font-size: 0.86rem;
+    line-height: 1.62;
+}
+
 .section-heading {
-    margin-top: 1.25rem;
-    margin-bottom: 1.35rem;
+    margin-top: 1.35rem;
+    margin-bottom: 1.25rem;
 }
 
 .section-eyebrow {
@@ -215,7 +249,7 @@ body,
 .section-title {
     margin-top: 0.42rem;
     color: var(--ink);
-    font-size: 1.85rem;
+    font-size: 1.62rem;
     line-height: 1.2;
     font-weight: 850;
     letter-spacing: -0.025em;
@@ -225,7 +259,7 @@ body,
     max-width: 900px;
     margin-top: 0.5rem;
     color: var(--muted);
-    font-size: 0.94rem;
+    font-size: 0.91rem;
     line-height: 1.7;
 }
 
