@@ -6,7 +6,6 @@ textColor = "#243746"
 font = "sans serif"
 
 [server]
-useStarlette = false
 maxUploadSize = 500
 enableXsrfProtection = true
 headless = true
