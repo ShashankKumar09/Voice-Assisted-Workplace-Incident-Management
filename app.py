@@ -10,63 +10,35 @@ from pathlib import Path
 
 import streamlit as st
 
-
 # ------------------------------------------------------------------------------
-# Streamlit HTML indentation compatibility
+# Trusted HTML rendering compatibility
 # ------------------------------------------------------------------------------
-
+# Multiline HTML strings are indented naturally inside Python functions.
+# Markdown treats four leading spaces as a code block, so remove that indentation
+# before Streamlit parses trusted HTML. This applies to st.markdown, sidebar
+# markdown, columns, containers, and other DeltaGenerator contexts.
 from textwrap import dedent
 from streamlit.delta_generator import DeltaGenerator
 
-_original_delta_markdown = DeltaGenerator.markdown
+_original_markdown = DeltaGenerator.markdown
 
-
-def _dedented_markdown(
+def _render_dedented_markdown(
     self,
     body,
     unsafe_allow_html=False,
     **kwargs,
 ):
-    """
-    Remove Python indentation from trusted multiline HTML before Streamlit
-    processes it as Markdown.
-
-    Without dedent(), indented HTML is interpreted as a Markdown code block.
-    """
-
     if unsafe_allow_html and isinstance(body, str):
+        body = dedent(body).strip()
 
-        html_markers = (
-            "<div",
-            "<span",
-            "<section",
-            "<article",
-            "<style",
-            "<p",
-            "<h1",
-            "<h2",
-            "<h3",
-            "<br",
-        )
-
-        body_lower = body.lower()
-
-        if any(
-            marker in body_lower
-            for marker in html_markers
-        ):
-            body = dedent(body).strip()
-
-    return _original_delta_markdown(
+    return _original_markdown(
         self,
         body,
         unsafe_allow_html=unsafe_allow_html,
         **kwargs,
     )
 
-
-DeltaGenerator.markdown = _dedented_markdown
-
+DeltaGenerator.markdown = _render_dedented_markdown
 
 from core.predictor import IncidentPredictor
 from pages.home import render_home_page
