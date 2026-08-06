@@ -70,66 +70,76 @@ st.markdown(
         border-radius: 11px !important;
     }
 
-    .stButton > button,
-    .stDownloadButton > button {
+    /* Base button geometry */
+    [data-testid="stAppViewContainer"] button {
         min-height: 2.55rem;
         border-radius: 10px !important;
         font-weight: 700 !important;
     }
 
-    /* Secondary and download buttons use dark text on a light background. */
-    .stButton > button:not([data-testid="stBaseButton-primary"]):not(:disabled),
-    .stDownloadButton > button:not(:disabled) {
+    /* Secondary buttons, download buttons and regular form buttons */
+    [data-testid="stAppViewContainer"] button[data-testid="stBaseButton-secondary"],
+    [data-testid="stAppViewContainer"] button[kind="secondary"],
+    [data-testid="stAppViewContainer"] .stDownloadButton button,
+    [data-testid="stAppViewContainer"] [data-testid="stFormSubmitButton"] button:not([data-testid="stBaseButton-primary"]) {
         color: #17324D !important;
         background: #FFFFFF !important;
         border: 1px solid #C9D8E1 !important;
     }
 
-    .stButton > button:not([data-testid="stBaseButton-primary"]):not(:disabled) p,
-    .stDownloadButton > button:not(:disabled) p {
+    [data-testid="stAppViewContainer"] button[data-testid="stBaseButton-secondary"] *,
+    [data-testid="stAppViewContainer"] button[kind="secondary"] *,
+    [data-testid="stAppViewContainer"] .stDownloadButton button *,
+    [data-testid="stAppViewContainer"] [data-testid="stFormSubmitButton"] button:not([data-testid="stBaseButton-primary"]) * {
         color: #17324D !important;
         opacity: 1 !important;
         font-weight: 750 !important;
+        fill: #17324D !important;
     }
 
-    .stButton > button:not([data-testid="stBaseButton-primary"]):not(:disabled):hover,
-    .stDownloadButton > button:not(:disabled):hover {
-        color: #123B56 !important;
+    [data-testid="stAppViewContainer"] button[data-testid="stBaseButton-secondary"]:hover,
+    [data-testid="stAppViewContainer"] button[kind="secondary"]:hover,
+    [data-testid="stAppViewContainer"] .stDownloadButton button:hover {
         background: #F2F8FB !important;
         border-color: #2B8BA5 !important;
     }
 
-    /* Primary action buttons remain teal with white text. */
-    button[data-testid="stBaseButton-primary"]:not(:disabled),
-    .stButton > button[kind="primary"]:not(:disabled) {
+    /* Primary buttons, including manual form submit and voice confirm */
+    [data-testid="stAppViewContainer"] button[data-testid="stBaseButton-primary"],
+    [data-testid="stAppViewContainer"] button[kind="primary"],
+    [data-testid="stAppViewContainer"] [data-testid="stFormSubmitButton"] button[kind="primary"] {
         color: #FFFFFF !important;
         background: #1F7892 !important;
         border-color: #1F7892 !important;
     }
 
-    button[data-testid="stBaseButton-primary"]:not(:disabled) p,
-    .stButton > button[kind="primary"]:not(:disabled) p {
+    [data-testid="stAppViewContainer"] button[data-testid="stBaseButton-primary"] *,
+    [data-testid="stAppViewContainer"] button[kind="primary"] *,
+    [data-testid="stAppViewContainer"] [data-testid="stFormSubmitButton"] button[kind="primary"] * {
         color: #FFFFFF !important;
         opacity: 1 !important;
         font-weight: 750 !important;
+        fill: #FFFFFF !important;
     }
 
-    button[data-testid="stBaseButton-primary"]:not(:disabled):hover,
-    .stButton > button[kind="primary"]:not(:disabled):hover {
+    [data-testid="stAppViewContainer"] button[data-testid="stBaseButton-primary"]:hover,
+    [data-testid="stAppViewContainer"] button[kind="primary"]:hover {
         background: #17647C !important;
         border-color: #17647C !important;
     }
 
-    .stButton > button:disabled,
-    .stDownloadButton > button:disabled {
+    /* Disabled buttons */
+    [data-testid="stAppViewContainer"] button:disabled {
+        color: #78909F !important;
         background: #EAF0F4 !important;
         border-color: #D5E0E7 !important;
-        opacity: .72 !important;
+        opacity: .78 !important;
     }
 
-    .stButton > button:disabled p,
-    .stDownloadButton > button:disabled p {
+    [data-testid="stAppViewContainer"] button:disabled * {
         color: #78909F !important;
+        fill: #78909F !important;
+        opacity: 1 !important;
     }
 
     [data-testid="stForm"] {
