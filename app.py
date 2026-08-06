@@ -77,13 +77,54 @@ st.markdown(
         font-weight: 700 !important;
     }
 
-    .stButton > button:not(:disabled) p,
-    .stDownloadButton > button:not(:disabled) p,
-    .stButton > button[kind="primary"]:not(:disabled) p,
-    button[data-testid="stBaseButton-primary"]:not(:disabled) p {
+    /* Secondary and download buttons use dark text on a light background. */
+    .stButton > button:not([data-testid="stBaseButton-primary"]):not(:disabled),
+    .stDownloadButton > button:not(:disabled) {
+        color: #17324D !important;
+        background: #FFFFFF !important;
+        border: 1px solid #C9D8E1 !important;
+    }
+
+    .stButton > button:not([data-testid="stBaseButton-primary"]):not(:disabled) p,
+    .stDownloadButton > button:not(:disabled) p {
+        color: #17324D !important;
+        opacity: 1 !important;
+        font-weight: 750 !important;
+    }
+
+    .stButton > button:not([data-testid="stBaseButton-primary"]):not(:disabled):hover,
+    .stDownloadButton > button:not(:disabled):hover {
+        color: #123B56 !important;
+        background: #F2F8FB !important;
+        border-color: #2B8BA5 !important;
+    }
+
+    /* Primary action buttons remain teal with white text. */
+    button[data-testid="stBaseButton-primary"]:not(:disabled),
+    .stButton > button[kind="primary"]:not(:disabled) {
+        color: #FFFFFF !important;
+        background: #1F7892 !important;
+        border-color: #1F7892 !important;
+    }
+
+    button[data-testid="stBaseButton-primary"]:not(:disabled) p,
+    .stButton > button[kind="primary"]:not(:disabled) p {
         color: #FFFFFF !important;
         opacity: 1 !important;
         font-weight: 750 !important;
+    }
+
+    button[data-testid="stBaseButton-primary"]:not(:disabled):hover,
+    .stButton > button[kind="primary"]:not(:disabled):hover {
+        background: #17647C !important;
+        border-color: #17647C !important;
+    }
+
+    .stButton > button:disabled,
+    .stDownloadButton > button:disabled {
+        background: #EAF0F4 !important;
+        border-color: #D5E0E7 !important;
+        opacity: .72 !important;
     }
 
     .stButton > button:disabled p,
@@ -120,8 +161,6 @@ st.markdown(
         overflow: hidden;
     }
 
-    /* Sidebar must remain high contrast. The earlier global text rule was
-       overriding the white navigation text and making pages look disabled. */
     [data-testid="stSidebar"],
     [data-testid="stSidebar"] * {
         color: #FFFFFF !important;
