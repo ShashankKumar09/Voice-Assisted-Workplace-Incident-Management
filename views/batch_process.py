@@ -9,7 +9,11 @@ import streamlit as st
 
 from batch.classifier import BatchClassifier
 from batch.validator import BatchValidator, load_uploaded_batch
-from ui.guide_components import render_module_header, render_user_guide
+from ui.guide_components import (
+    render_module_header,
+    render_section_header,
+    render_user_guide,
+)
 from views.manual_report import load_predictor
 
 
@@ -23,37 +27,18 @@ TEMPLATE_COLUMNS = [
 
 
 def _template_dataframe() -> pd.DataFrame:
-    return pd.DataFrame([
-        {
-            "ID": "INC-1001",
-            "UPA": "UPA-2501",
-            "EventDate": "2026-08-06",
-            "Employer": "ABC Manufacturing",
-            "Address1": "100 Industrial Road",
-            "Address2": "",
-            "City": "Bengaluru",
-            "State": "Karnataka",
-            "Zip": "560001",
-            "Latitude": "12.9716",
-            "Longitude": "77.5946",
-            "Primary NAICS": "332710",
-            "Hospitalized": "No",
-            "Amputation": "No",
-            "Loss of Eye": "No",
-            "Inspection": "",
-            "FederalState": "State",
-            "Final Narrative": (
-                "An employee slipped on a wet floor, fell on the same level, "
-                "and fractured the left ankle."
-            ),
-        }
-    ], columns=TEMPLATE_COLUMNS)
+    """Return an empty official template containing headers only."""
+    return pd.DataFrame(columns=TEMPLATE_COLUMNS)
 
 
 def _excel_template_bytes() -> bytes:
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-        _template_dataframe().to_excel(writer, sheet_name="Incident Template", index=False)
+        _template_dataframe().to_excel(
+            writer,
+            sheet_name="Incident Template",
+            index=False,
+        )
     return buffer.getvalue()
 
 
@@ -83,11 +68,16 @@ def render() -> None:
         ),
     )
 
-    st.markdown("## 1. Download Batch Template")
-    c1, c2 = st.columns(2)
+    render_section_header(
+        "1",
+        "Download OSHA Batch Template",
+        "Download the official blank template before preparing incident records.",
+        "⬇️",
+    )
+    c1, c2 = st.columns(2, gap="medium")
     with c1:
         st.download_button(
-            "⬇️ Download CSV Template",
+            "Download CSV Template",
             data=_template_dataframe().to_csv(index=False).encode("utf-8-sig"),
             file_name="osha_batch_template.csv",
             mime="text/csv",
@@ -95,14 +85,19 @@ def render() -> None:
         )
     with c2:
         st.download_button(
-            "⬇️ Download Excel Template",
+            "Download Excel Template",
             data=_excel_template_bytes(),
             file_name="osha_batch_template.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True,
         )
 
-    st.markdown("## 2. Upload and Validate")
+    render_section_header(
+        "2",
+        "Upload and Validate Batch File",
+        "Upload a completed CSV or Excel file. Every row is checked before classification.",
+        "📤",
+    )
     uploaded_file = st.file_uploader(
         "Upload completed batch file",
         type=["csv", "xlsx"],
@@ -122,7 +117,7 @@ def render() -> None:
         return
 
     st.caption(f"Uploaded file: {uploaded_file.name}")
-    summary_cols = st.columns(3)
+    summary_cols = st.columns(3, gap="medium")
     summary_cols[0].metric("Uploaded Records", len(uploaded_df))
     summary_cols[1].metric("Ready", int(validation.get("ready_records", 0)))
     summary_cols[2].metric("Validation Failed", int(validation.get("failed_records", 0)))
@@ -150,10 +145,15 @@ def render() -> None:
         st.error("No records are currently ready for classification.")
         return
 
-    st.markdown("## 3. Classify Eligible Records")
+    render_section_header(
+        "3",
+        "Run Multi-Task Classification",
+        "Classify every eligible narrative and generate OSHA/OIICS codes, titles and confidence scores.",
+        "⚙️",
+    )
     st.caption(
-        "The output uses standard OSHA/OIICS columns: Nature, NatureTitle, "
-        "Part of Body, Event, Source, confidence scores and Decision."
+        "Output columns include Nature, NatureTitle, Part of Body, Event, Source, "
+        "confidence scores and Decision."
     )
 
     if st.button(
@@ -176,7 +176,12 @@ def render() -> None:
     if not result:
         return
 
-    st.markdown("## 4. Processing Results")
+    render_section_header(
+        "4",
+        "Review and Export Results",
+        "Review the processing summary and download completed OSHA/OIICS results.",
+        "📊",
+    )
     output_df = result["output_dataframe"]
     processing_summary = result["processing_summary"]
 
@@ -190,10 +195,10 @@ def render() -> None:
     st.dataframe(processing_summary, use_container_width=True, hide_index=True)
     st.dataframe(output_df, use_container_width=True, hide_index=True)
 
-    d1, d2 = st.columns(2)
+    d1, d2 = st.columns(2, gap="medium")
     with d1:
         st.download_button(
-            "⬇️ Download Classified CSV",
+            "Download Classified CSV",
             data=result["csv_bytes"],
             file_name="osha_batch_classified.csv",
             mime="text/csv",
@@ -201,7 +206,7 @@ def render() -> None:
         )
     with d2:
         st.download_button(
-            "⬇️ Download Classified Excel",
+            "Download Classified Excel",
             data=result["excel_bytes"],
             file_name="osha_batch_classified.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
