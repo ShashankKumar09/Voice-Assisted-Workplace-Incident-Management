@@ -8,6 +8,7 @@ Microphone transcription and classification will be connected next.
 
 from __future__ import annotations
 
+from html import escape
 from typing import Dict, List
 
 import streamlit as st
@@ -285,7 +286,7 @@ def render_captured_information() -> None:
             else "Skipped"
         )
 
-        st.markdown(
+        st.html(
             f"""
             <div style="
                 margin-bottom: 0.6rem;
@@ -301,7 +302,7 @@ def render_captured_information() -> None:
                     letter-spacing: 0.06em;
                     text-transform: uppercase;
                 ">
-                    {field["label"]}
+                    {escape(str(field["label"]))}
                 </div>
 
                 <div style="
@@ -310,11 +311,10 @@ def render_captured_information() -> None:
                     font-size: 0.85rem;
                     line-height: 1.45;
                 ">
-                    {display_value}
+                    {escape(str(display_value))}
                 </div>
             </div>
-            """,
-            unsafe_allow_html=True,
+            """
         )
 
 
@@ -365,7 +365,7 @@ def render_capture_screen() -> None:
             else "Optional"
         )
 
-        st.markdown(
+        st.html(
             f"""
             <div style="
                 padding: 1.4rem;
@@ -387,7 +387,7 @@ def render_capture_screen() -> None:
                 ">
                     Field {current_step + 1} of {total_fields}
                     &nbsp;•&nbsp;
-                    {required_text}
+                    {escape(required_text)}
                 </div>
 
                 <div style="
@@ -396,7 +396,7 @@ def render_capture_screen() -> None:
                     font-size: 1.45rem;
                     font-weight: 800;
                 ">
-                    {current_field["label"]}
+                    {escape(str(current_field["label"]))}
                 </div>
 
                 <div style="
@@ -405,7 +405,7 @@ def render_capture_screen() -> None:
                     font-size: 0.95rem;
                     line-height: 1.65;
                 ">
-                    {current_field["question"]}
+                    {escape(str(current_field["question"]))}
                 </div>
 
                 <div style="
@@ -417,11 +417,10 @@ def render_capture_screen() -> None:
                     color: #31566B;
                     font-size: 0.82rem;
                 ">
-                    <b>Example:</b> {current_field["example"]}
+                    <b>Example:</b> {escape(str(current_field["example"]))}
                 </div>
             </div>
-            """,
-            unsafe_allow_html=True,
+            """
         )
 
         st.markdown("")
