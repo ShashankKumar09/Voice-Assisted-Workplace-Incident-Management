@@ -70,69 +70,52 @@ st.markdown(
         border-radius: 11px !important;
     }
 
-    /* Base button geometry */
-    [data-testid="stAppViewContainer"] button {
+    /* One standard application button style across every page. */
+    [data-testid="stAppViewContainer"] button:not(:disabled),
+    [data-testid="stAppViewContainer"] .stDownloadButton button:not(:disabled),
+    [data-testid="stAppViewContainer"] [data-testid="stFormSubmitButton"] button:not(:disabled) {
         min-height: 2.55rem;
+        color: #FFFFFF !important;
+        background: #247D94 !important;
+        border: 1px solid #247D94 !important;
         border-radius: 10px !important;
-        font-weight: 700 !important;
-    }
-
-    /* Secondary buttons, download buttons and regular form buttons */
-    [data-testid="stAppViewContainer"] button[data-testid="stBaseButton-secondary"],
-    [data-testid="stAppViewContainer"] button[kind="secondary"],
-    [data-testid="stAppViewContainer"] .stDownloadButton button,
-    [data-testid="stAppViewContainer"] [data-testid="stFormSubmitButton"] button:not([data-testid="stBaseButton-primary"]) {
-        color: #17324D !important;
-        background: #FFFFFF !important;
-        border: 1px solid #C9D8E1 !important;
-    }
-
-    [data-testid="stAppViewContainer"] button[data-testid="stBaseButton-secondary"] *,
-    [data-testid="stAppViewContainer"] button[kind="secondary"] *,
-    [data-testid="stAppViewContainer"] .stDownloadButton button *,
-    [data-testid="stAppViewContainer"] [data-testid="stFormSubmitButton"] button:not([data-testid="stBaseButton-primary"]) * {
-        color: #17324D !important;
-        opacity: 1 !important;
+        box-shadow: none !important;
         font-weight: 750 !important;
-        fill: #17324D !important;
     }
 
-    [data-testid="stAppViewContainer"] button[data-testid="stBaseButton-secondary"]:hover,
-    [data-testid="stAppViewContainer"] button[kind="secondary"]:hover,
-    [data-testid="stAppViewContainer"] .stDownloadButton button:hover {
-        background: #F2F8FB !important;
-        border-color: #2B8BA5 !important;
-    }
-
-    /* Primary buttons, including manual form submit and voice confirm */
-    [data-testid="stAppViewContainer"] button[data-testid="stBaseButton-primary"],
-    [data-testid="stAppViewContainer"] button[kind="primary"],
-    [data-testid="stAppViewContainer"] [data-testid="stFormSubmitButton"] button[kind="primary"] {
+    [data-testid="stAppViewContainer"] button:not(:disabled) *,
+    [data-testid="stAppViewContainer"] .stDownloadButton button:not(:disabled) *,
+    [data-testid="stAppViewContainer"] [data-testid="stFormSubmitButton"] button:not(:disabled) * {
         color: #FFFFFF !important;
-        background: #1F7892 !important;
-        border-color: #1F7892 !important;
-    }
-
-    [data-testid="stAppViewContainer"] button[data-testid="stBaseButton-primary"] *,
-    [data-testid="stAppViewContainer"] button[kind="primary"] *,
-    [data-testid="stAppViewContainer"] [data-testid="stFormSubmitButton"] button[kind="primary"] * {
-        color: #FFFFFF !important;
-        opacity: 1 !important;
-        font-weight: 750 !important;
         fill: #FFFFFF !important;
+        opacity: 1 !important;
+        font-weight: 750 !important;
     }
 
-    [data-testid="stAppViewContainer"] button[data-testid="stBaseButton-primary"]:hover,
-    [data-testid="stAppViewContainer"] button[kind="primary"]:hover {
+    [data-testid="stAppViewContainer"] button:not(:disabled):hover,
+    [data-testid="stAppViewContainer"] .stDownloadButton button:not(:disabled):hover,
+    [data-testid="stAppViewContainer"] [data-testid="stFormSubmitButton"] button:not(:disabled):hover {
+        color: #FFFFFF !important;
         background: #17647C !important;
         border-color: #17647C !important;
+        box-shadow: 0 5px 14px rgba(23,100,124,.16) !important;
     }
 
-    /* Disabled buttons */
+    [data-testid="stAppViewContainer"] button:not(:disabled):focus,
+    [data-testid="stAppViewContainer"] .stDownloadButton button:not(:disabled):focus {
+        color: #FFFFFF !important;
+        background: #247D94 !important;
+        border-color: #17647C !important;
+        box-shadow: 0 0 0 2px rgba(36,125,148,.18) !important;
+    }
+
+    /* Disabled buttons remain visibly inactive. */
     [data-testid="stAppViewContainer"] button:disabled {
+        min-height: 2.55rem;
         color: #78909F !important;
         background: #EAF0F4 !important;
-        border-color: #D5E0E7 !important;
+        border: 1px solid #D5E0E7 !important;
+        border-radius: 10px !important;
         opacity: .78 !important;
     }
 
