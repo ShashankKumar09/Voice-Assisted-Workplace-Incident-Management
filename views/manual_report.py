@@ -1,4 +1,6 @@
-"""
+from pathlib import Path
+
+code = r'''"""
 Manual Incident Reporting with live backend integration.
 """
 
@@ -21,11 +23,15 @@ APP_ROOT = Path(__file__).resolve().parents[1]
 INCIDENT_DATA_PATH = APP_ROOT / "data" / "incident_records.csv"
 
 
+# ==============================================================================
+# Backend loaders
+# ==============================================================================
+
 @st.cache_resource(show_spinner=False)
 def load_predictor():
     """
     Load the packaged multi-task DeBERTa predictor only when classification
-    is requested. Lazy loading keeps the rest of the application responsive.
+    is requested.
     """
     from core.predictor import IncidentPredictor
 
@@ -51,10 +57,12 @@ def generate_report(
     )
 
 
-def save_incident_record(report_package: Dict[str, Any]) -> None:
+def save_incident_record(
+    report_package: Dict[str, Any],
+) -> None:
     """
     Append the completed record to the dashboard data store.
-    Existing records with the same ID are replaced.
+    Existing records with the same Incident ID are replaced.
     """
     record_df = report_package["csv_dataframe"].copy()
 
@@ -96,6 +104,10 @@ def save_incident_record(report_package: Dict[str, Any]) -> None:
     )
 
 
+# ==============================================================================
+# Result helpers
+# ==============================================================================
+
 def _prediction_value(
     prediction: Dict[str, Any],
     task_name: str,
@@ -134,27 +146,85 @@ def _render_prediction_card(
     label: str,
     confidence: float,
 ) -> None:
-    confidence = max(0.0, min(float(confidence), 100.0))
+    confidence_clamped = max(
+        0.0,
+        min(float(confidence), 100.0),
+    )
 
     st.html(
         f"""
         <div style="
-            min-height:220px; padding:1.25rem; border-radius:18px;
-            border:1px solid #DCE6ED; background:linear-gradient(180deg,#FFFFFF 0%,#F8FBFD 100%);
-            box-shadow:0 8px 22px rgba(26,58,79,0.06);
+            min-height: 220px;
+            padding: 1.25rem;
+            border-radius: 18px;
+            border: 1px solid #DCE6ED;
+            background: linear-gradient(
+                180deg,
+                #FFFFFF 0%,
+                #F8FBFD 100%
+            );
+            box-shadow: 0 8px 22px rgba(26,58,79,0.06);
         ">
-            <div style="color:#6A7F8F;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;">
+            <div style="
+                color: #6A7F8F;
+                font-size: 0.72rem;
+                font-weight: 800;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            ">
                 {title}
             </div>
-            <div style="min-height:72px;margin-top:.75rem;color:#17324D;font-size:1.15rem;line-height:1.35;font-weight:800;">
+
+            <div style="
+                min-height: 72px;
+                margin-top: 0.75rem;
+                color: #17324D;
+                font-size: 1.15rem;
+                line-height: 1.35;
+                font-weight: 800;
+            ">
                 {label}
             </div>
-            <div style="height:9px;margin-top:1rem;border-radius:999px;overflow:hidden;background:#E7EEF2;">
-                <div style="width:{confidence:.2f}%;height:100%;border-radius:999px;background:linear-gradient(90deg,#1F6A86,#2B8BA5);"></div>
+
+            <div style="
+                height: 9px;
+                margin-top: 1rem;
+                border-radius: 999px;
+                overflow: hidden;
+                background: #E7EEF2;
+            ">
+                <div style="
+                    width: {confidence_clamped:.2f}%;
+                    height: 100%;
+                    border-radius: 999px;
+                    background: linear-gradient(
+                        90deg,
+                        #1F6A86,
+                        #2B8BA5
+                    );
+                "></div>
             </div>
-            <div style="display:flex;justify-content:space-between;gap:.5rem;margin-top:.65rem;">
-                <span style="color:#2B7897;font-size:.82rem;font-weight:800;">{confidence:.2f}%</span>
-                <span style="color:#7C8E9A;font-size:.73rem;">Confidence</span>
+
+            <div style="
+                display: flex;
+                justify-content: space-between;
+                gap: 0.5rem;
+                margin-top: 0.65rem;
+            ">
+                <span style="
+                    color: #2B7897;
+                    font-size: 0.82rem;
+                    font-weight: 800;
+                ">
+                    {confidence_clamped:.2f}%
+                </span>
+
+                <span style="
+                    color: #7C8E9A;
+                    font-size: 0.73rem;
+                ">
+                    Confidence
+                </span>
             </div>
         </div>
         """
@@ -170,17 +240,39 @@ def _render_summary_card(
     st.html(
         f"""
         <div style="
-            min-height:148px; padding:1.2rem 1.25rem; border-radius:18px;
-            border:1px solid #DCE6ED; background:#FFFFFF;
-            box-shadow:0 8px 22px rgba(26,58,79,0.06);
+            min-height: 148px;
+            padding: 1.2rem 1.25rem;
+            border-radius: 18px;
+            border: 1px solid #DCE6ED;
+            background: #FFFFFF;
+            box-shadow: 0 8px 22px rgba(26,58,79,0.06);
         ">
-            <div style="color:#6A7F8F;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;">
+            <div style="
+                color: #6A7F8F;
+                font-size: 0.72rem;
+                font-weight: 800;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            ">
                 {label}
             </div>
-            <div style="margin-top:.65rem;color:{value_color};font-size:1.32rem;line-height:1.3;font-weight:850;">
+
+            <div style="
+                margin-top: 0.65rem;
+                color: {value_color};
+                font-size: 1.32rem;
+                line-height: 1.3;
+                font-weight: 850;
+            ">
                 {value}
             </div>
-            <div style="margin-top:.45rem;color:#7C8E9A;font-size:.75rem;line-height:1.45;">
+
+            <div style="
+                margin-top: 0.45rem;
+                color: #7C8E9A;
+                font-size: 0.75rem;
+                line-height: 1.45;
+            ">
                 {caption}
             </div>
         </div>
@@ -192,14 +284,23 @@ def render_prediction_results(
     prediction: Dict[str, Any],
     report_package: Dict[str, Any],
 ) -> None:
+    """
+    Render aligned, professional classification results.
+    """
+
+    # Change 1: improved success banner
     st.success(
-        "Classification completed successfully. "
-        "Review the predicted categories before downloading the report."
+        "✅ Incident classified successfully. "
+        "Review the predicted OSHA categories, confidence scores and decision "
+        "recommendation before downloading the final report."
     )
 
     st.markdown("## Classification Results")
 
-    prediction_columns = st.columns(4, gap="medium")
+    prediction_columns = st.columns(
+        4,
+        gap="medium",
+    )
 
     task_configuration = [
         ("nature", "Nature"),
@@ -212,45 +313,84 @@ def render_prediction_results(
         prediction_columns,
         task_configuration,
     ):
-        task_result = _prediction_value(prediction, task_name)
+        task_result = _prediction_value(
+            prediction,
+            task_name,
+        )
 
         with column:
             _render_prediction_card(
                 title=display_name,
                 label=str(task_result["label"]),
-                confidence=float(task_result["confidence_percent"]),
+                confidence=float(
+                    task_result["confidence_percent"]
+                ),
             )
 
     overall_confidence = float(
-        prediction["incident_confidence"]["geometric_mean_percent"]
+        prediction[
+            "incident_confidence"
+        ][
+            "geometric_mean_percent"
+        ]
     )
 
-    decision_tier = str(prediction["decision"]["tier"])
-    relationship = prediction["relationship_validation"]
-    historical_status = str(relationship["historical_validation_status"])
+    decision_tier = str(
+        prediction[
+            "decision"
+        ][
+            "tier"
+        ]
+    )
 
-    decision_icon, decision_color = _decision_display(decision_tier)
-    historical_icon, historical_label, historical_color = _historical_display(
+    relationship = prediction[
+        "relationship_validation"
+    ]
+
+    historical_status = str(
+        relationship[
+            "historical_validation_status"
+        ]
+    )
+
+    decision_icon, decision_color = _decision_display(
+        decision_tier
+    )
+
+    (
+        historical_icon,
+        historical_label,
+        historical_color,
+    ) = _historical_display(
         historical_status
     )
 
     st.markdown("")
     st.markdown("### Decision Summary")
 
-    summary_columns = st.columns(3, gap="medium")
+    summary_columns = st.columns(
+        3,
+        gap="medium",
+    )
 
     with summary_columns[0]:
         _render_summary_card(
             label="Overall Confidence",
             value=f"{overall_confidence:.2f}%",
-            caption="Geometric mean across Nature, Body, Event and Source.",
+            caption=(
+                "Geometric mean across Nature, "
+                "Body, Event and Source."
+            ),
         )
 
     with summary_columns[1]:
         _render_summary_card(
             label="Decision Tier",
             value=f"{decision_icon} {decision_tier}",
-            caption="Final routing based on the configured confidence thresholds.",
+            caption=(
+                "Final routing based on the "
+                "configured confidence thresholds."
+            ),
             value_color=decision_color,
         )
 
@@ -258,15 +398,36 @@ def render_prediction_results(
         _render_summary_card(
             label="Historical Validation",
             value=f"{historical_icon} {historical_label}",
-            caption="Support observed across historical category relationships.",
+            caption=(
+                "Support observed across historical "
+                "category relationships."
+            ),
             value_color=historical_color,
         )
 
-    with st.expander("Historical Validation Details", expanded=False):
+    with st.expander(
+        "Historical Validation Details",
+        expanded=False,
+    ):
         st.info(
             relationship.get(
                 "message",
                 "Historical relationship validation completed.",
+            )
+        )
+
+        # Change 2: historical scores displayed as percentages
+        historical_score = float(
+            relationship.get(
+                "consistency_score",
+                0.0,
+            )
+        )
+
+        weakest_relationship_score = float(
+            relationship.get(
+                "weakest_relationship_score",
+                0.0,
             )
         )
 
@@ -279,10 +440,16 @@ def render_prediction_results(
                     "Weakest Relationship Score",
                 ],
                 "Value": [
-                    relationship.get("historical_validation_status", ""),
-                    relationship.get("consistency_score", ""),
-                    relationship.get("weakest_relationship", ""),
-                    relationship.get("weakest_relationship_score", ""),
+                    relationship.get(
+                        "historical_validation_status",
+                        "",
+                    ),
+                    f"{historical_score * 100:.2f}%",
+                    relationship.get(
+                        "weakest_relationship",
+                        "",
+                    ),
+                    f"{weakest_relationship_score * 100:.2f}%",
                 ],
             }
         )
@@ -295,9 +462,14 @@ def render_prediction_results(
 
     st.markdown("---")
     st.markdown("## Download Completed Report")
-    st.caption("Download the classified incident record in PDF or CSV format.")
+    st.caption(
+        "Download the classified incident record in PDF or CSV format."
+    )
 
-    download_columns = st.columns(2, gap="medium")
+    download_columns = st.columns(
+        2,
+        gap="medium",
+    )
 
     with download_columns[0]:
         st.download_button(
@@ -316,6 +488,11 @@ def render_prediction_results(
             mime="text/csv",
             use_container_width=True,
         )
+
+
+# ==============================================================================
+# Page rendering
+# ==============================================================================
 
 def render() -> None:
     render_module_header(
@@ -366,7 +543,8 @@ def render() -> None:
 
     st.markdown("## New Incident Report")
     st.caption(
-        "Fields marked with * are required. The model is loaded only after submission."
+        "Fields marked with * are required. "
+        "The model is loaded only after submission."
     )
 
     with st.form(
@@ -482,12 +660,12 @@ def render() -> None:
             "Describe what happened *",
             height=170,
             placeholder=(
-                "Example: An employee slipped on a wet floor, fell on the "
-                "same level, and fractured the left ankle."
+                "Example: An employee slipped on a wet floor, "
+                "fell on the same level, and fractured the left ankle."
             ),
             help=(
-                "Include the activity, event, injury, body part and source "
-                "where known."
+                "Include the activity, event, injury, body part "
+                "and source where known."
             ),
         )
 
@@ -501,7 +679,9 @@ def render() -> None:
         errors = []
 
         if not incident_id.strip():
-            errors.append("Incident ID is required.")
+            errors.append(
+                "Incident ID is required."
+            )
 
         narrative_word_count = len(
             final_narrative.strip().split()
@@ -512,10 +692,16 @@ def render() -> None:
             or narrative_word_count < 4
         ):
             errors.append(
-                "Final Narrative must contain a clear incident description."
+                "Final Narrative must contain "
+                "a clear incident description."
             )
 
-        for field_label, value, minimum, maximum in [
+        for (
+            field_label,
+            value,
+            minimum,
+            maximum,
+        ) in [
             ("Latitude", latitude, -90.0, 90.0),
             ("Longitude", longitude, -180.0, 180.0),
         ]:
@@ -536,6 +722,7 @@ def render() -> None:
         if errors:
             for error in errors:
                 st.error(error)
+
         else:
             incident_details = {
                 "ID": incident_id.strip(),
@@ -565,9 +752,7 @@ def render() -> None:
                     predictor = load_predictor()
 
                     prediction = predictor.predict(
-                        narrative=incident_details[
-                            "Final Narrative"
-                        ],
+                        narrative=incident_details["Final Narrative"],
                         include_top_predictions=True,
                         top_k=3,
                     )
@@ -596,6 +781,8 @@ def render() -> None:
             st.session_state.manual_report_package,
         )
 
+        st.markdown("")
+
         if st.button(
             "Start New Manual Report",
             use_container_width=True,
@@ -603,3 +790,9 @@ def render() -> None:
             st.session_state.manual_result = None
             st.session_state.manual_report_package = None
             st.rerun()
+'''
+
+path = Path("/mnt/data/manual_report_complete_updated.py")
+path.write_text(code, encoding="utf-8")
+
+print(path)
