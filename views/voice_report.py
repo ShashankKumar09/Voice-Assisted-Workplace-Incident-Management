@@ -196,7 +196,7 @@ def load_speech_engine():
     from voice.speech_engine import SpeechRecognitionEngine
 
     return SpeechRecognitionEngine(
-        model_size="tiny.en",
+        model_size="base.en",
         device="cpu",
         compute_type="int8",
     )
@@ -813,13 +813,14 @@ def process_audio(
 
     try:
         with st.spinner(
-            "Reducing background noise and transcribing..."
+            "Capturing speech and selecting the clearest transcription..."
         ):
             field = VOICE_FIELDS[step]
             result = load_speech_engine().transcribe_bytes(
                 audio_bytes,
                 language="en",
                 prompt=transcription_prompt(field),
+                field_type=str(field["type"]),
             )
 
         transcript = str(
@@ -956,13 +957,13 @@ def render_capture_screen() -> None:
                 "Recording transcribed"
             )
 
+            selected_audio = str(
+                transcription_metadata.get("selected_audio", "original")
+            )
             noise_status = (
-                "Noise reduction applied"
-                if transcription_metadata.get(
-                    "noise_reduction_applied",
-                    False,
-                )
-                else "Original audio used"
+                "Cleaned audio selected"
+                if selected_audio == "cleaned"
+                else "Original audio selected"
             )
 
             status_columns[1].info(
