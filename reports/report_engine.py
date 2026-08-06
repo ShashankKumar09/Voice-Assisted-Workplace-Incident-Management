@@ -561,10 +561,26 @@ def build_flat_record(
         for field in INCIDENT_INPUT_FIELDS
     }
 
+    flattened_prediction = flatten_prediction(
+        prediction_result
+    )
+
+    excluded_fragments = (
+        "historical",
+        "relationship_validation",
+        "consistency_score",
+        "weakest_relationship",
+    )
+
     record.update(
-        flatten_prediction(
-            prediction_result
-        )
+        {
+            key: value
+            for key, value in flattened_prediction.items()
+            if not any(
+                fragment in str(key).lower()
+                for fragment in excluded_fragments
+            )
+        }
     )
 
     record[
@@ -1070,220 +1086,6 @@ def generate_pdf(
         Spacer(
             1,
             6 * mm,
-        )
-    )
-
-    story.append(
-        Paragraph(
-            "Historical Validation",
-            SECTION_STYLE,
-        )
-    )
-
-    historical = prediction_result[
-        "relationship_validation"
-    ]
-
-    explanation = Table(
-        [[
-            Paragraph(
-                (
-                    "<b>What is Historical Validation?</b><br/>"
-                    "This section verifies whether the predicted Nature, Body, "
-                    "Event and Source classifications have been observed together "
-                    "in historical workplace incident records. It does not change "
-                    "the predicted classifications or the Decision Tier; it provides "
-                    "an additional confidence check based on historical relationships."
-                ),
-                BODY_STYLE,
-            )
-        ]],
-        colWidths=[
-            172 * mm
-        ],
-    )
-
-    explanation.setStyle(
-        TableStyle([
-            (
-                "BACKGROUND",
-                (0, 0),
-                (-1, -1),
-                BRAND_LIGHT_BLUE,
-            ),
-            (
-                "BOX",
-                (0, 0),
-                (-1, -1),
-                0.8,
-                BRAND_BLUE,
-            ),
-            (
-                "LEFTPADDING",
-                (0, 0),
-                (-1, -1),
-                4 * mm,
-            ),
-            (
-                "RIGHTPADDING",
-                (0, 0),
-                (-1, -1),
-                4 * mm,
-            ),
-            (
-                "TOPPADDING",
-                (0, 0),
-                (-1, -1),
-                3 * mm,
-            ),
-            (
-                "BOTTOMPADDING",
-                (0, 0),
-                (-1, -1),
-                3 * mm,
-            ),
-        ])
-    )
-
-    story.append(
-        explanation
-    )
-
-    story.append(
-        Spacer(
-            1,
-            3 * mm,
-        )
-    )
-
-    historical_table = Table(
-        [
-            [
-                Paragraph(
-                    "Historical Validation Status",
-                    LABEL_STYLE,
-                ),
-                Paragraph(
-                    escape_pdf_text(
-                        historical[
-                            "historical_validation_status"
-                        ]
-                    ),
-                    VALUE_STYLE,
-                ),
-            ],
-            [
-                Paragraph(
-                    "Historical Score",
-                    LABEL_STYLE,
-                ),
-                Paragraph(
-                    f"{historical['consistency_score']:.6f}",
-                    VALUE_STYLE,
-                ),
-            ],
-            [
-                Paragraph(
-                    "Weakest Historical Relationship",
-                    LABEL_STYLE,
-                ),
-                Paragraph(
-                    escape_pdf_text(
-                        historical[
-                            "weakest_relationship"
-                        ]
-                    ),
-                    VALUE_STYLE,
-                ),
-            ],
-            [
-                Paragraph(
-                    "Weakest Relationship Score",
-                    LABEL_STYLE,
-                ),
-                Paragraph(
-                    f"{historical['weakest_relationship_score']:.6f}",
-                    VALUE_STYLE,
-                ),
-            ],
-            [
-                Paragraph(
-                    "Interpretation",
-                    LABEL_STYLE,
-                ),
-                Paragraph(
-                    escape_pdf_text(
-                        historical[
-                            "message"
-                        ]
-                    ),
-                    VALUE_STYLE,
-                ),
-            ],
-        ],
-        colWidths=[
-            58 * mm,
-            114 * mm,
-        ],
-    )
-
-    historical_table.setStyle(
-        TableStyle([
-            (
-                "BACKGROUND",
-                (0, 0),
-                (0, -1),
-                SURFACE,
-            ),
-            (
-                "BOX",
-                (0, 0),
-                (-1, -1),
-                0.7,
-                BORDER,
-            ),
-            (
-                "INNERGRID",
-                (0, 0),
-                (-1, -1),
-                0.5,
-                BORDER,
-            ),
-            (
-                "LEFTPADDING",
-                (0, 0),
-                (-1, -1),
-                4 * mm,
-            ),
-            (
-                "RIGHTPADDING",
-                (0, 0),
-                (-1, -1),
-                4 * mm,
-            ),
-            (
-                "TOPPADDING",
-                (0, 0),
-                (-1, -1),
-                3 * mm,
-            ),
-            (
-                "BOTTOMPADDING",
-                (0, 0),
-                (-1, -1),
-                3 * mm,
-            ),
-        ])
-    )
-
-    story.append(
-        historical_table
-    )
-
-    story.append(
-        Spacer(
-            1,
-            5 * mm,
         )
     )
 
