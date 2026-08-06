@@ -19,12 +19,10 @@ st.set_page_config(
 
 apply_theme()
 
-# Final global typography layer. This keeps native Streamlit widgets visually
-# consistent with the stronger typography already used by the custom Batch UI.
 st.markdown(
     """
     <style>
-    html, body, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] {
+    html, body, [data-testid="stAppViewContainer"] {
         font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         color: #17324D;
     }
@@ -43,19 +41,17 @@ st.markdown(
     [data-testid="stAppViewContainer"] h2 { font-size: 1.55rem !important; }
     [data-testid="stAppViewContainer"] h3 { font-size: 1.22rem !important; }
 
-    [data-testid="stWidgetLabel"] p,
-    [data-testid="stMarkdownContainer"] p,
-    .stCaptionContainer,
-    [data-testid="stAlertContainer"] {
-        color: #526B7C;
-        font-weight: 500;
-    }
-
-    [data-testid="stWidgetLabel"] p {
+    [data-testid="stAppViewContainer"] [data-testid="stWidgetLabel"] p {
         color: #23445B !important;
         font-size: .82rem !important;
         font-weight: 700 !important;
-        letter-spacing: .005em;
+    }
+
+    [data-testid="stAppViewContainer"] [data-testid="stMarkdownContainer"] p,
+    [data-testid="stAppViewContainer"] .stCaptionContainer,
+    [data-testid="stAppViewContainer"] [data-testid="stAlertContainer"] {
+        color: #526B7C;
+        font-weight: 500;
     }
 
     [data-baseweb="input"] input,
@@ -79,7 +75,20 @@ st.markdown(
         min-height: 2.55rem;
         border-radius: 10px !important;
         font-weight: 700 !important;
-        letter-spacing: .005em;
+    }
+
+    .stButton > button:not(:disabled) p,
+    .stDownloadButton > button:not(:disabled) p,
+    .stButton > button[kind="primary"]:not(:disabled) p,
+    button[data-testid="stBaseButton-primary"]:not(:disabled) p {
+        color: #FFFFFF !important;
+        opacity: 1 !important;
+        font-weight: 750 !important;
+    }
+
+    .stButton > button:disabled p,
+    .stDownloadButton > button:disabled p {
+        color: #78909F !important;
     }
 
     [data-testid="stForm"] {
@@ -105,25 +114,33 @@ st.markdown(
         box-shadow: 0 6px 16px rgba(23,50,77,.04);
     }
 
-    [data-testid="stMetricLabel"] p {
-        color: #607686 !important;
-        font-weight: 700 !important;
-    }
-
-    [data-testid="stMetricValue"] {
-        color: #17324D !important;
-        font-weight: 800 !important;
-    }
-
     [data-testid="stDataFrame"] {
         border: 1px solid #DCE6ED;
         border-radius: 13px;
         overflow: hidden;
     }
 
+    /* Sidebar must remain high contrast. The earlier global text rule was
+       overriding the white navigation text and making pages look disabled. */
+    [data-testid="stSidebar"],
+    [data-testid="stSidebar"] * {
+        color: #FFFFFF !important;
+    }
+
+    [data-testid="stSidebarNav"] p,
     [data-testid="stSidebarNav"] span,
-    [data-testid="stSidebarNav"] p {
+    [data-testid="stSidebarNav"] a {
+        color: #FFFFFF !important;
+        opacity: 1 !important;
         font-weight: 650 !important;
+    }
+
+    [data-testid="stSidebarNav"] a[aria-current="page"] {
+        background: rgba(255,255,255,.14) !important;
+    }
+
+    [data-testid="stSidebarNav"] a:hover {
+        background: rgba(255,255,255,.10) !important;
     }
 
     @media (max-width: 900px) {
@@ -137,43 +154,13 @@ st.markdown(
 
 pages = {
     "Incident Management": [
-        st.Page(
-            render_home,
-            title="Home",
-            icon=":material/home:",
-            url_path="home",
-            default=True,
-        ),
-        st.Page(
-            render_voice,
-            title="Voice Reporting",
-            icon=":material/mic:",
-            url_path="voice-reporting",
-        ),
-        st.Page(
-            render_manual,
-            title="Manual Reporting",
-            icon=":material/edit_document:",
-            url_path="manual-reporting",
-        ),
-        st.Page(
-            render_batch,
-            title="Batch Processing",
-            icon=":material/upload_file:",
-            url_path="batch-processing",
-        ),
-        st.Page(
-            render_analytics,
-            title="Safety Analytics",
-            icon=":material/monitoring:",
-            url_path="safety-analytics",
-        ),
+        st.Page(render_home, title="Home", icon=":material/home:", url_path="home", default=True),
+        st.Page(render_voice, title="Voice Reporting", icon=":material/mic:", url_path="voice-reporting"),
+        st.Page(render_manual, title="Manual Reporting", icon=":material/edit_document:", url_path="manual-reporting"),
+        st.Page(render_batch, title="Batch Processing", icon=":material/upload_file:", url_path="batch-processing"),
+        st.Page(render_analytics, title="Safety Analytics", icon=":material/monitoring:", url_path="safety-analytics"),
     ]
 }
 
-selected_page = st.navigation(
-    pages,
-    position="sidebar",
-)
-
+selected_page = st.navigation(pages, position="sidebar")
 selected_page.run()
