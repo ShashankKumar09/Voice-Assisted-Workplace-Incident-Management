@@ -131,33 +131,6 @@ def _decision_display(
     return "🔴", "#A83A3A"
 
 
-def _historical_display(
-    historical_status: str,
-) -> tuple[str, str, str]:
-
-    normalized = historical_status.lower()
-
-    if "strong" in normalized:
-        return (
-            "🟢",
-            "Strong Historical Support",
-            "#216B58",
-        )
-
-    if "moderate" in normalized:
-        return (
-            "🟡",
-            "Moderate Historical Support",
-            "#9A6B00",
-        )
-
-    return (
-        "🔴",
-        "Limited Historical Support",
-        "#A83A3A",
-    )
-
-
 def _render_prediction_card(
     title: str,
     label: str,
@@ -385,35 +358,18 @@ def render_prediction_results(
         ]
     )
 
-    relationship = prediction[
-        "relationship_validation"
-    ]
-
-    historical_status = str(
-        relationship[
-            "historical_validation_status"
-        ]
-    )
-
     decision_icon, decision_color = (
         _decision_display(
             decision_tier
         )
     )
 
-    (
-        historical_icon,
-        historical_label,
-        historical_color,
-    ) = _historical_display(
-        historical_status
-    )
 
     st.markdown("")
     st.markdown("### Decision Summary")
 
     summary_columns = st.columns(
-        3,
+        2,
         gap="medium",
     )
 
@@ -441,78 +397,6 @@ def render_prediction_results(
                 "configured confidence thresholds."
             ),
             value_color=decision_color,
-        )
-
-    with summary_columns[2]:
-
-        _render_summary_card(
-            label="Historical Validation",
-            value=(
-                f"{historical_icon} "
-                f"{historical_label}"
-            ),
-            caption=(
-                "Support observed across historical "
-                "category relationships."
-            ),
-            value_color=historical_color,
-        )
-
-    with st.expander(
-        "Historical Validation Details",
-        expanded=False,
-    ):
-
-        st.info(
-            relationship.get(
-                "message",
-                "Historical relationship validation completed.",
-            )
-        )
-
-        historical_score = float(
-            relationship.get(
-                "consistency_score",
-                0.0,
-            )
-        )
-
-        weakest_relationship_score = float(
-            relationship.get(
-                "weakest_relationship_score",
-                0.0,
-            )
-        )
-
-        details_df = pd.DataFrame(
-            {
-                "Measure": [
-                    "Historical Validation Status",
-                    "Historical Score",
-                    "Weakest Historical Relationship",
-                    "Weakest Relationship Score",
-                ],
-                "Value": [
-                    relationship.get(
-                        "historical_validation_status",
-                        "",
-                    ),
-                    f"{historical_score * 100:.2f}%",
-                    relationship.get(
-                        "weakest_relationship",
-                        "",
-                    ),
-                    (
-                        f"{weakest_relationship_score * 100:.2f}%"
-                    ),
-                ],
-            }
-        )
-
-        st.dataframe(
-            details_df,
-            hide_index=True,
-            use_container_width=True,
         )
 
     st.markdown("---")
