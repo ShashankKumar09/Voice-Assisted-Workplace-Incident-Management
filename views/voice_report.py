@@ -15,8 +15,10 @@ Complete guided workflow:
 
 from __future__ import annotations
 
+from datetime import datetime
 from hashlib import sha256
 from html import escape
+import re
 from typing import Dict, List
 
 import streamlit as st
@@ -42,7 +44,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Please provide the Incident ID.",
         "example": "INC-1001",
         "required": True,
-        "type": "text",
+        "type": "identifier",
     },
     {
         "key": "UPA",
@@ -50,7 +52,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Please provide the UPA reference.",
         "example": "UPA-2501",
         "required": False,
-        "type": "text",
+        "type": "identifier",
     },
     {
         "key": "EventDate",
@@ -58,7 +60,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Please provide the date when the incident occurred.",
         "example": "5 August 2026",
         "required": False,
-        "type": "text",
+        "type": "date",
     },
     {
         "key": "Employer",
@@ -106,7 +108,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Please provide the ZIP or postal code.",
         "example": "560001",
         "required": False,
-        "type": "text",
+        "type": "digits",
     },
     {
         "key": "Latitude",
@@ -130,7 +132,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Please provide the Primary NAICS code.",
         "example": "332710",
         "required": False,
-        "type": "text",
+        "type": "digits",
     },
     {
         "key": "Hospitalized",
@@ -162,7 +164,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Please provide the inspection reference.",
         "example": "INS-45021",
         "required": False,
-        "type": "text",
+        "type": "identifier",
     },
     {
         "key": "FederalState",
@@ -299,11 +301,247 @@ def consume_pending_recording_reset(
     st.session_state[reset_key] = False
 
 
+
+DIGIT_WORDS = {
+    "zero": "0",
+    "oh": "0",
+    "o": "0",
+    "one": "1",
+    "two": "2",
+    "to": "2",
+    "too": "2",
+    "three": "3",
+    "four": "4",
+    "for": "4",
+    "five": "5",
+    "six": "6",
+    "seven": "7",
+    "eight": "8",
+    "ate": "8",
+    "nine": "9",
+}
+
+REPEAT_WORDS = {
+    "double": 2,
+    "triple": 3,
+}
+
+SEPARATOR_WORDS = {
+    "dash": "-",
+    "hyphen": "-",
+    "minus": "-",
+    "underscore": "_",
+    "slash": "/",
+    "dot": ".",
+    "point": ".",
+}
+
+
+def _clean_spoken_tokens(value: str) -> List[str]:
+    """Return lowercase tokens while retaining identifier separators."""
+    cleaned = value.lower().strip()
+    cleaned = cleaned.replace("–", "-").replace("—", "-")
+    return re.findall(r"[a-z]+|\d+|[-_/.]", cleaned)
+
+
+def normalize_spoken_code(
+    value: str,
+    *,
+    digits_only: bool = False,
+) -> str:
+    """
+    Convert digit-by-digit speech to a compact code.
+
+    Examples:
+    ``two zero one five zero one double zero one five`` -> ``2015010015``
+    ``I N C dash one zero zero one`` -> ``INC-1001``.
+    """
+    tokens = _clean_spoken_tokens(value)
+    if not tokens:
+        return value.strip()
+
+    output: List[str] = []
+    recognized = 0
+    index = 0
+
+    while index < len(tokens):
+        token = tokens[index]
+
+        if token in REPEAT_WORDS and index + 1 < len(tokens):
+            next_token = tokens[index + 1]
+            repeated_digit = DIGIT_WORDS.get(next_token)
+            if repeated_digit is None and next_token.isdigit() and len(next_token) == 1:
+                repeated_digit = next_token
+
+            if repeated_digit is not None:
+                output.append(repeated_digit * REPEAT_WORDS[token])
+                recognized += 2
+                index += 2
+                continue
+
+        if token in DIGIT_WORDS:
+            output.append(DIGIT_WORDS[token])
+            recognized += 1
+        elif token.isdigit():
+            output.append(token)
+            recognized += 1
+        elif token in SEPARATOR_WORDS:
+            output.append(SEPARATOR_WORDS[token])
+            recognized += 1
+        elif token in {"-", "_", "/", "."}:
+            output.append(token)
+            recognized += 1
+        elif not digits_only:
+            # Whisper sometimes separates an acronym into individual letters.
+            output.append(token.upper())
+        index += 1
+
+    if digits_only:
+        normalized = "".join(part for part in output if part.isdigit())
+        # Do not destroy an ordinary non-numeric response if no number was found.
+        return normalized if normalized else value.strip()
+
+    normalized = "".join(output)
+    if not normalized or recognized == 0:
+        return value.strip()
+
+    return normalized
+
+
+def normalize_spoken_decimal(value: str) -> str:
+    """Normalize spoken latitude/longitude, including minus and decimal point."""
+    tokens = _clean_spoken_tokens(value)
+    output: List[str] = []
+    index = 0
+
+    while index < len(tokens):
+        token = tokens[index]
+
+        if token in {"negative", "minus"} and not output:
+            output.append("-")
+        elif token in {"point", "dot"}:
+            output.append(".")
+        elif token in REPEAT_WORDS and index + 1 < len(tokens):
+            next_digit = DIGIT_WORDS.get(tokens[index + 1])
+            if next_digit is not None:
+                output.append(next_digit * REPEAT_WORDS[token])
+                index += 1
+        elif token in DIGIT_WORDS:
+            output.append(DIGIT_WORDS[token])
+        elif token.isdigit():
+            output.append(token)
+        elif token in {".", "-"}:
+            output.append(token)
+
+        index += 1
+
+    normalized = "".join(output)
+    return normalized if normalized not in {"", "-", "."} else value.strip()
+
+
+def normalize_spoken_date(value: str) -> str:
+    """Convert common spoken or typed dates to ISO ``YYYY-MM-DD``."""
+    cleaned = value.strip()
+    if not cleaned:
+        return ""
+
+    normalized = cleaned.lower()
+    normalized = re.sub(r"\b(\d+)(st|nd|rd|th)\b", r"\1", normalized)
+    normalized = re.sub(r"[,]+", " ", normalized)
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+
+    formats = (
+        "%d %B %Y",
+        "%d %b %Y",
+        "%B %d %Y",
+        "%b %d %Y",
+        "%Y-%m-%d",
+        "%d-%m-%Y",
+        "%d/%m/%Y",
+        "%m/%d/%Y",
+    )
+
+    for date_format in formats:
+        try:
+            return datetime.strptime(normalized, date_format).strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+
+    return cleaned
+
+
+def normalize_field_value(
+    raw_value: str,
+    field: Dict[str, object],
+) -> str:
+    """Apply field-aware cleanup to voice and manually edited transcripts."""
+    value = raw_value.strip()
+    field_type = str(field["type"])
+
+    if not value:
+        return ""
+
+    if field_type == "identifier":
+        return normalize_spoken_code(value)
+
+    if field_type == "digits":
+        return normalize_spoken_code(value, digits_only=True)
+
+    if field_type in {"latitude", "longitude"}:
+        return normalize_spoken_decimal(value)
+
+    if field_type == "date":
+        return normalize_spoken_date(value)
+
+    return value
+
+
+def transcription_prompt(field: Dict[str, object]) -> str:
+    """Provide Whisper with concise context for the current incident field."""
+    field_type = str(field["type"])
+    label = str(field["label"])
+
+    if field_type == "identifier":
+        return (
+            f"The speaker is dictating the {label}. "
+            "Write letters, digits, hyphens and separators exactly."
+        )
+
+    if field_type == "digits":
+        return (
+            f"The speaker is dictating the numeric {label}. "
+            "Transcribe every digit separately and preserve zeroes."
+        )
+
+    if field_type in {"latitude", "longitude"}:
+        return (
+            f"The speaker is dictating a {label} coordinate. "
+            "Preserve the minus sign and decimal point."
+        )
+
+    if field_type == "date":
+        return "The speaker is dictating an incident date in English."
+
+    if field_type == "yes_no":
+        return f"The speaker is answering Yes or No for {label}."
+
+    if field_type == "federal_state":
+        return "The speaker is answering Federal or State."
+
+    if field_type == "narrative":
+        return (
+            "The speaker is describing a workplace safety incident, including "
+            "the activity, event, injury, body part and source."
+        )
+
+    return f"The speaker is providing the incident field: {label}."
+
+
 def validate_response(
     raw_value: str,
     field: Dict[str, object],
 ) -> tuple[str, str | None]:
-    value = raw_value.strip()
+    value = normalize_field_value(raw_value, field)
 
     if bool(field["required"]) and not value:
         return "", f"{field['label']} is required."
@@ -568,9 +806,11 @@ def process_audio(
         with st.spinner(
             "Reducing background noise and transcribing..."
         ):
+            field = VOICE_FIELDS[step]
             result = load_speech_engine().transcribe_bytes(
                 audio_bytes,
                 language="en",
+                prompt=transcription_prompt(field),
             )
 
         transcript = str(
@@ -579,6 +819,11 @@ def process_audio(
                 "",
             )
         ).strip()
+
+        transcript = normalize_field_value(
+            transcript,
+            VOICE_FIELDS[step],
+        )
 
         if not transcript:
             st.warning(
