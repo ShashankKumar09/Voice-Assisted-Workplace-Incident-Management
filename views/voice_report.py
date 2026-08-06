@@ -1,15 +1,24 @@
 """
-Voice Incident Reporting page.
+Voice Incident Reporting.
 
-Stage 2:
-Guided field-by-field incident capture with browser microphone recording,
-speech-to-text transcription, editable transcripts and final review.
+Complete guided workflow:
+- browser microphone capture
+- background-noise reduction and speech-to-text
+- editable transcript
+- previous, skip, confirm and record-again controls
+- editable final review
+- DeBERTa classification
+- historical validation
+- PDF and CSV downloads
+- incident-store persistence
 """
 
 from __future__ import annotations
 
+from datetime import datetime
 from html import escape
-from typing import Dict, List
+from pathlib import Path
+from typing import Any, Dict, List
 
 import streamlit as st
 
@@ -18,10 +27,14 @@ from ui.guide_components import (
     render_user_guide,
 )
 
+# Reuse the already-tested Manual Reporting backend and result design.
+from views.manual_report import (
+    generate_report,
+    load_predictor,
+    render_prediction_results,
+    save_incident_record,
+)
 
-# ==============================================================================
-# Guided voice-reporting fields
-# ==============================================================================
 
 VOICE_FIELDS: List[Dict[str, object]] = [
     {
@@ -30,6 +43,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Please provide the Incident ID.",
         "example": "INC-1001",
         "required": True,
+        "type": "text",
     },
     {
         "key": "UPA",
@@ -37,6 +51,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Please provide the UPA reference.",
         "example": "UPA-2501",
         "required": False,
+        "type": "text",
     },
     {
         "key": "EventDate",
@@ -44,6 +59,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Please provide the date when the incident occurred.",
         "example": "5 August 2026",
         "required": False,
+        "type": "text",
     },
     {
         "key": "Employer",
@@ -51,6 +67,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Please provide the employer name.",
         "example": "ABC Manufacturing",
         "required": False,
+        "type": "text",
     },
     {
         "key": "Address1",
@@ -58,6 +75,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Please provide Address Line 1.",
         "example": "100 Industrial Road",
         "required": False,
+        "type": "text",
     },
     {
         "key": "Address2",
@@ -65,6 +83,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Please provide Address Line 2, or skip this field.",
         "example": "Building B",
         "required": False,
+        "type": "text",
     },
     {
         "key": "City",
@@ -72,6 +91,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Please provide the city.",
         "example": "Bengaluru",
         "required": False,
+        "type": "text",
     },
     {
         "key": "State",
@@ -79,6 +99,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Please provide the state.",
         "example": "Karnataka",
         "required": False,
+        "type": "text",
     },
     {
         "key": "Zip",
@@ -86,6 +107,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Please provide the ZIP or postal code.",
         "example": "560001",
         "required": False,
+        "type": "text",
     },
     {
         "key": "Latitude",
@@ -93,6 +115,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Please provide the latitude, or skip this field.",
         "example": "12.9716",
         "required": False,
+        "type": "latitude",
     },
     {
         "key": "Longitude",
@@ -100,6 +123,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Please provide the longitude, or skip this field.",
         "example": "77.5946",
         "required": False,
+        "type": "longitude",
     },
     {
         "key": "Primary NAICS",
@@ -107,6 +131,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Please provide the Primary NAICS code.",
         "example": "332710",
         "required": False,
+        "type": "text",
     },
     {
         "key": "Hospitalized",
@@ -114,6 +139,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Was the employee hospitalized? Please answer Yes or No.",
         "example": "Yes",
         "required": False,
+        "type": "yes_no",
     },
     {
         "key": "Amputation",
@@ -121,6 +147,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Did the incident involve an amputation? Please answer Yes or No.",
         "example": "No",
         "required": False,
+        "type": "yes_no",
     },
     {
         "key": "Loss of Eye",
@@ -128,6 +155,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Did the incident involve loss of an eye? Please answer Yes or No.",
         "example": "No",
         "required": False,
+        "type": "yes_no",
     },
     {
         "key": "Inspection",
@@ -135,6 +163,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Please provide the inspection reference.",
         "example": "INS-45021",
         "required": False,
+        "type": "text",
     },
     {
         "key": "FederalState",
@@ -142,6 +171,7 @@ VOICE_FIELDS: List[Dict[str, object]] = [
         "question": "Please specify whether this is Federal or State.",
         "example": "State",
         "required": False,
+        "type": "federal_state",
     },
     {
         "key": "Final Narrative",
@@ -155,19 +185,13 @@ VOICE_FIELDS: List[Dict[str, object]] = [
             "and fractured the left ankle."
         ),
         "required": True,
+        "type": "narrative",
     },
 ]
 
 
-# ==============================================================================
-# Backend loader
-# ==============================================================================
-
 @st.cache_resource(show_spinner=False)
 def load_speech_engine():
-    """
-    Load the local speech-recognition engine only when audio is first submitted.
-    """
     from voice.speech_engine import SpeechRecognitionEngine
 
     return SpeechRecognitionEngine(
@@ -177,20 +201,30 @@ def load_speech_engine():
     )
 
 
-# ==============================================================================
-# Session-state helpers
-# ==============================================================================
-
 def transcript_key(step: int) -> str:
     return f"voice_transcript_{step}"
 
 
-def audio_key(step: int) -> str:
-    return f"voice_audio_{step}"
+def audio_version_key(step: int) -> str:
+    return f"voice_audio_version_{step}"
+
+
+def current_audio_key(step: int) -> str:
+    version = int(
+        st.session_state.get(
+            audio_version_key(step),
+            0,
+        )
+    )
+    return f"voice_audio_{step}_{version}"
 
 
 def audio_signature_key(step: int) -> str:
     return f"voice_audio_signature_{step}"
+
+
+def pending_reset_key(step: int) -> str:
+    return f"voice_pending_reset_{step}"
 
 
 def initialize_voice_state() -> None:
@@ -198,6 +232,9 @@ def initialize_voice_state() -> None:
         "voice_stage": "welcome",
         "voice_step": 0,
         "voice_answers": {},
+        "voice_prediction": None,
+        "voice_report_package": None,
+        "voice_saved": False,
     }
 
     for key, value in defaults.items():
@@ -206,175 +243,229 @@ def initialize_voice_state() -> None:
 
 
 def reset_voice_workflow() -> None:
-    """
-    Clear workflow state and all dynamic audio/transcript widget values.
-    """
     removable_keys = [
         key
         for key in list(st.session_state.keys())
         if (
-            key in {
-                "voice_stage",
-                "voice_step",
-                "voice_answers",
+            key.startswith("voice_")
+            and key not in {
+                "voice_navigation",
             }
-            or key.startswith("voice_transcript_")
-            or key.startswith("voice_audio_")
-            or key.startswith("voice_audio_signature_")
         )
     ]
 
     for key in removable_keys:
-        st.session_state.pop(key, None)
+        st.session_state.pop(
+            key,
+            None,
+        )
 
     initialize_voice_state()
 
 
-def prepare_step_transcript(
-    step: int,
-) -> None:
-    """
-    Prepare the transcript widget value before its next render.
-    """
+def prepare_step_transcript(step: int) -> None:
     field = VOICE_FIELDS[step]
-    st.session_state[transcript_key(step)] = (
-        st.session_state.voice_answers.get(
-            field["key"],
-            "",
-        )
+
+    st.session_state[
+        transcript_key(step)
+    ] = st.session_state.voice_answers.get(
+        field["key"],
+        "",
     )
 
 
-# ==============================================================================
-# Value validation
-# ==============================================================================
+def consume_pending_recording_reset(
+    step: int,
+) -> None:
+    """
+    Clear widget state before widgets are instantiated on the new run.
+    """
+    reset_key = pending_reset_key(step)
+
+    if not st.session_state.get(
+        reset_key,
+        False,
+    ):
+        return
+
+    st.session_state.pop(
+        transcript_key(step),
+        None,
+    )
+    st.session_state.pop(
+        audio_signature_key(step),
+        None,
+    )
+
+    st.session_state[reset_key] = False
+
 
 def validate_response(
-    value: str,
+    raw_value: str,
     field: Dict[str, object],
-) -> str | None:
-    cleaned = value.strip()
+) -> tuple[str, str | None]:
+    value = raw_value.strip()
 
-    if bool(field["required"]) and not cleaned:
-        return f"{field['label']} is required."
+    if bool(field["required"]) and not value:
+        return "", f"{field['label']} is required."
 
-    if field["key"] == "Final Narrative":
-        if len(cleaned) < 15 or len(cleaned.split()) < 4:
-            return "Please provide a more descriptive incident narrative."
+    field_type = str(field["type"])
 
-    if field["key"] in {
-        "Hospitalized",
-        "Amputation",
-        "Loss of Eye",
-    } and cleaned:
-        if cleaned.lower() not in {
+    if not value:
+        return "", None
+
+    if field_type == "yes_no":
+        normalized = (
+            value.lower()
+            .replace(".", "")
+            .strip()
+        )
+
+        if normalized in {
             "yes",
-            "no",
             "y",
+            "yeah",
+            "true",
+            "1",
+            "one",
+        }:
+            return "Yes", None
+
+        if normalized in {
+            "no",
             "n",
+            "nope",
+            "false",
+            "0",
+            "zero",
         }:
-            return f"{field['label']} must be Yes or No."
+            return "No", None
 
-    if field["key"] == "FederalState" and cleaned:
-        if cleaned.lower() not in {
-            "federal",
-            "state",
-        }:
-            return "Federal / State must be Federal or State."
+        return "", f"{field['label']} must be Yes or No."
 
-    return None
+    if field_type == "federal_state":
+        normalized = value.lower().strip()
 
+        if "federal" in normalized:
+            return "Federal", None
 
-def normalize_response(
-    value: str,
-    field: Dict[str, object],
-) -> str:
-    cleaned = value.strip()
+        if (
+            normalized == "state"
+            or normalized.endswith(
+                " state"
+            )
+        ):
+            return "State", None
 
-    if field["key"] in {
-        "Hospitalized",
-        "Amputation",
-        "Loss of Eye",
+        return "", "Federal / State must be Federal or State."
+
+    if field_type in {
+        "latitude",
+        "longitude",
     }:
-        if cleaned.lower() in {"yes", "y"}:
-            return "Yes"
-        if cleaned.lower() in {"no", "n"}:
-            return "No"
+        numeric_text = (
+            value.lower()
+            .replace("negative ", "-")
+            .replace("minus ", "-")
+            .replace(",", ".")
+        )
 
-    if field["key"] == "FederalState":
-        if cleaned.lower() == "federal":
-            return "Federal"
-        if cleaned.lower() == "state":
-            return "State"
+        try:
+            numeric_value = float(
+                numeric_text
+            )
+        except ValueError:
+            return "", f"{field['label']} must be numeric."
 
-    return cleaned
+        minimum, maximum = (
+            (-90.0, 90.0)
+            if field_type == "latitude"
+            else (-180.0, 180.0)
+        )
 
+        if not minimum <= numeric_value <= maximum:
+            return (
+                "",
+                f"{field['label']} must be between "
+                f"{minimum:g} and {maximum:g}.",
+            )
 
-# ==============================================================================
-# Reusable UI blocks
-# ==============================================================================
+        return str(numeric_value), None
+
+    if field_type == "narrative":
+        if (
+            len(value) < 15
+            or len(value.split()) < 4
+        ):
+            return (
+                "",
+                "Please provide a more descriptive incident narrative.",
+            )
+
+    return value, None
+
 
 def render_question_card(
-    current_field: Dict[str, object],
-    current_step: int,
-    total_fields: int,
+    field: Dict[str, object],
+    step: int,
+    total: int,
 ) -> None:
-    required_text = (
+    requirement = (
         "Required"
-        if bool(current_field["required"])
+        if bool(field["required"])
         else "Optional"
     )
 
     st.html(
         f"""
         <div style="
-            padding: 1.4rem;
-            border-radius: 18px;
-            border: 1px solid #DCE6ED;
-            background: linear-gradient(180deg,#FFFFFF 0%,#F8FBFD 100%);
-            box-shadow: 0 8px 22px rgba(26,58,79,0.06);
+            padding:1.45rem;
+            border-radius:20px;
+            border:1px solid #D7E4EB;
+            background:linear-gradient(180deg,#FFFFFF 0%,#F8FBFD 100%);
+            box-shadow:0 10px 28px rgba(26,58,79,.07);
         ">
             <div style="
                 color:#286A9B;
-                font-size:0.72rem;
+                font-size:.72rem;
                 font-weight:800;
-                letter-spacing:0.08em;
+                letter-spacing:.08em;
                 text-transform:uppercase;
             ">
-                Field {current_step + 1} of {total_fields}
+                Question {step + 1} of {total}
                 &nbsp;•&nbsp;
-                {escape(required_text)}
+                {escape(requirement)}
             </div>
 
             <div style="
-                margin-top:0.7rem;
+                margin-top:.75rem;
                 color:#17324D;
-                font-size:1.45rem;
-                font-weight:800;
+                font-size:1.55rem;
+                font-weight:850;
             ">
-                {escape(str(current_field["label"]))}
+                {escape(str(field["label"]))}
             </div>
 
             <div style="
-                margin-top:0.55rem;
+                margin-top:.55rem;
                 color:#536B7D;
-                font-size:0.95rem;
+                font-size:.96rem;
                 line-height:1.65;
             ">
-                {escape(str(current_field["question"]))}
+                {escape(str(field["question"]))}
             </div>
 
             <div style="
                 margin-top:1rem;
-                padding:0.85rem 1rem;
+                padding:.85rem 1rem;
                 border-radius:12px;
-                background:#EDF7FB;
                 border:1px solid #CDE2EC;
+                background:#EDF7FB;
                 color:#31566B;
-                font-size:0.82rem;
+                font-size:.83rem;
             ">
                 <b>Example:</b>
-                {escape(str(current_field["example"]))}
+                {escape(str(field["example"]))}
             </div>
         </div>
         """
@@ -388,27 +479,27 @@ def render_answer_card(
     st.html(
         f"""
         <div style="
-            margin-bottom:0.6rem;
-            padding:0.85rem 1rem;
+            margin-bottom:.6rem;
+            padding:.85rem 1rem;
             border-radius:14px;
             border:1px solid #DCE6ED;
             background:#FFFFFF;
-            box-shadow:0 4px 12px rgba(26,58,79,0.04);
+            box-shadow:0 4px 12px rgba(26,58,79,.04);
         ">
             <div style="
                 color:#6A7F8F;
-                font-size:0.70rem;
+                font-size:.69rem;
                 font-weight:800;
-                letter-spacing:0.06em;
+                letter-spacing:.06em;
                 text-transform:uppercase;
             ">
-                {escape(label)}
+                ✓ {escape(label)}
             </div>
 
             <div style="
-                margin-top:0.25rem;
+                margin-top:.25rem;
                 color:#17324D;
-                font-size:0.85rem;
+                font-size:.84rem;
                 line-height:1.45;
                 overflow-wrap:anywhere;
             ">
@@ -419,39 +510,15 @@ def render_answer_card(
     )
 
 
-# ==============================================================================
-# Workflow screens
-# ==============================================================================
-
-def render_welcome_screen() -> None:
-    st.markdown("## Guided Voice Reporting")
-
-    st.info(
-        "The assistant will guide you through 18 incident fields, one question "
-        "at a time. Record each answer, review the transcript and confirm it "
-        "before continuing."
-    )
-
-    st.markdown("")
-
-    if st.button(
-        "Start Guided Voice Report",
-        type="primary",
-        use_container_width=True,
-    ):
-        st.session_state.voice_stage = "capture"
-        st.session_state.voice_step = 0
-        prepare_step_transcript(0)
-        st.rerun()
-
-
 def render_captured_information() -> None:
-    st.markdown("### Captured Information")
+    st.markdown("### Live Incident Summary")
 
     answers = st.session_state.voice_answers
 
     if not answers:
-        st.info("Confirmed responses will appear here.")
+        st.info(
+            "Confirmed responses will appear here."
+        )
         return
 
     for field in VOICE_FIELDS:
@@ -460,7 +527,10 @@ def render_captured_information() -> None:
         if field_key not in answers:
             continue
 
-        value = answers.get(field_key, "")
+        value = answers.get(
+            field_key,
+            "",
+        )
 
         render_answer_card(
             label=str(field["label"]),
@@ -476,9 +546,6 @@ def process_audio(
     audio_value,
     step: int,
 ) -> None:
-    """
-    Transcribe newly recorded audio once and populate the current transcript.
-    """
     if audio_value is None:
         return
 
@@ -489,56 +556,103 @@ def process_audio(
         hash(audio_bytes[:1024]),
     )
 
-    signature_state_key = audio_signature_key(step)
+    signature_key = audio_signature_key(
+        step
+    )
 
-    if st.session_state.get(signature_state_key) == signature:
+    if st.session_state.get(
+        signature_key
+    ) == signature:
         return
 
     try:
-        with st.spinner("Transcribing your response..."):
+        with st.spinner(
+            "Reducing background noise and transcribing..."
+        ):
             result = load_speech_engine().transcribe_bytes(
                 audio_bytes,
                 language="en",
             )
 
         transcript = str(
-            result.get("transcript", "")
+            result.get(
+                "transcript",
+                "",
+            )
         ).strip()
 
         if not transcript:
             st.warning(
-                "No speech was recognized. Please record again or type the response."
+                "No speech was recognized. "
+                "Please select Record Again."
             )
             return
 
-        # This key has not yet been instantiated as a text-area widget in this run,
-        # so it can safely be populated here.
-        st.session_state[transcript_key(step)] = transcript
-        st.session_state[signature_state_key] = signature
+        st.session_state[
+            transcript_key(step)
+        ] = transcript
+
+        st.session_state[
+            signature_key
+        ] = signature
+
+        st.session_state[
+            f"voice_last_transcription_{step}"
+        ] = result
+
         st.rerun()
 
     except Exception as error:
         st.error(
             "Speech transcription failed. "
-            "You can record again or type the response manually."
+            "Select Record Again or type the response manually."
         )
-        st.caption(str(error))
+        st.caption(
+            str(error)
+        )
+
+
+def render_welcome_screen() -> None:
+    st.markdown("## Guided Voice Reporting")
+
+    st.info(
+        "The assistant will guide you through 18 incident fields. "
+        "Record one answer at a time, review the transcript and confirm it "
+        "before continuing."
+    )
+
+    if st.button(
+        "Start Guided Voice Report",
+        type="primary",
+        use_container_width=True,
+    ):
+        st.session_state.voice_stage = "capture"
+        st.session_state.voice_step = 0
+        prepare_step_transcript(0)
+        st.rerun()
 
 
 def render_capture_screen() -> None:
-    current_step = int(st.session_state.voice_step)
-    total_fields = len(VOICE_FIELDS)
-    current_field = VOICE_FIELDS[current_step]
+    step = int(
+        st.session_state.voice_step
+    )
+    total = len(VOICE_FIELDS)
+    field = VOICE_FIELDS[step]
 
-    completed_fields = len(st.session_state.voice_answers)
+    consume_pending_recording_reset(
+        step
+    )
+
+    completed = len(
+        st.session_state.voice_answers
+    )
 
     st.markdown("## Guided Voice Reporting")
 
     st.progress(
-        completed_fields / total_fields,
+        completed / total,
         text=(
-            f"{completed_fields} of "
-            f"{total_fields} fields completed"
+            f"{completed} of {total} fields completed"
         ),
     )
 
@@ -549,126 +663,199 @@ def render_capture_screen() -> None:
 
     with left_column:
         render_question_card(
-            current_field=current_field,
-            current_step=current_step,
-            total_fields=total_fields,
+            field=field,
+            step=step,
+            total=total,
         )
 
         st.markdown("")
-
-        st.markdown("#### Record your response")
+        st.markdown("### 🎤 Voice Assistant")
+        st.caption(
+            "Press the microphone, speak your response and stop recording "
+            "when finished."
+        )
 
         audio_value = st.audio_input(
-            f"Record {current_field['label']}",
+            f"Record {field['label']}",
             sample_rate=16000,
-            key=audio_key(current_step),
+            key=current_audio_key(step),
             help=(
                 "Use the microphone attached to your device for clearer "
-                "recording input. Stop recording when your response is complete."
+                "recording input."
             ),
         )
 
-        # Must run before the text-area widget is created.
         process_audio(
             audio_value=audio_value,
-            step=current_step,
+            step=step,
         )
+
+        transcription_metadata = st.session_state.get(
+            f"voice_last_transcription_{step}"
+        )
+
+        if transcription_metadata:
+            status_columns = st.columns(
+                2
+            )
+
+            status_columns[0].success(
+                "Recording transcribed"
+            )
+
+            noise_status = (
+                "Noise reduction applied"
+                if transcription_metadata.get(
+                    "noise_reduction_applied",
+                    False,
+                )
+                else "Original audio used"
+            )
+
+            status_columns[1].info(
+                noise_status
+            )
+
+        st.markdown("#### Review Transcript")
 
         transcript = st.text_area(
-            "Recognized transcript",
-            key=transcript_key(current_step),
+            "Review and edit the recognized response",
+            key=transcript_key(step),
             height=(
-                170
-                if current_field["key"] == "Final Narrative"
+                175
+                if field["key"] == "Final Narrative"
                 else 110
             ),
-            placeholder=str(current_field["example"]),
-            help=(
-                "Review and edit the speech-to-text result before confirming."
+            placeholder=str(
+                field["example"]
             ),
+            help=(
+                "Correct any speech-to-text errors before confirming."
+            ),
+            label_visibility="visible",
         )
 
-        action_columns = st.columns(
+        recording_controls = st.columns(
+            2,
+            gap="small",
+        )
+
+        with recording_controls[0]:
+            record_again = st.button(
+                "🔁 Record Again",
+                use_container_width=True,
+                key=f"voice_record_again_{step}",
+            )
+
+        with recording_controls[1]:
+            use_transcript = st.button(
+                "✓ Confirm Answer",
+                type="primary",
+                use_container_width=True,
+                key=f"voice_use_transcript_{step}",
+            )
+
+        if record_again:
+            st.session_state[
+                audio_version_key(step)
+            ] = int(
+                st.session_state.get(
+                    audio_version_key(step),
+                    0,
+                )
+            ) + 1
+
+            st.session_state[
+                pending_reset_key(step)
+            ] = True
+
+            st.session_state.pop(
+                f"voice_last_transcription_{step}",
+                None,
+            )
+
+            st.rerun()
+
+        if use_transcript:
+            normalized_value, error = validate_response(
+                transcript,
+                field,
+            )
+
+            if error:
+                st.error(
+                    error
+                )
+            else:
+                st.session_state.voice_answers[
+                    field["key"]
+                ] = normalized_value
+
+                if step == total - 1:
+                    st.session_state.voice_stage = "review"
+                else:
+                    next_step = step + 1
+                    st.session_state.voice_step = next_step
+                    prepare_step_transcript(
+                        next_step
+                    )
+
+                st.rerun()
+
+        navigation_columns = st.columns(
             3,
             gap="small",
         )
 
-        with action_columns[0]:
+        with navigation_columns[0]:
             previous_clicked = st.button(
                 "← Previous",
                 use_container_width=True,
-                disabled=current_step == 0,
-                key=f"voice_previous_{current_step}",
+                disabled=step == 0,
+                key=f"voice_previous_{step}",
             )
 
-        with action_columns[1]:
-            confirm_clicked = st.button(
-                "Confirm & Continue",
-                type="primary",
-                use_container_width=True,
-                key=f"voice_confirm_{current_step}",
-            )
-
-        with action_columns[2]:
+        with navigation_columns[1]:
             skip_clicked = st.button(
                 "Skip Optional",
                 use_container_width=True,
-                disabled=bool(current_field["required"]),
-                key=f"voice_skip_{current_step}",
+                disabled=bool(
+                    field["required"]
+                ),
+                key=f"voice_skip_{step}",
+            )
+
+        with navigation_columns[2]:
+            restart_clicked = st.button(
+                "Start Again",
+                use_container_width=True,
+                key=f"voice_restart_{step}",
             )
 
         if previous_clicked:
-            target_step = current_step - 1
+            target_step = step - 1
             st.session_state.voice_step = target_step
-            prepare_step_transcript(target_step)
-            st.rerun()
-
-        if confirm_clicked:
-            error = validate_response(
-                transcript,
-                current_field,
+            prepare_step_transcript(
+                target_step
             )
-
-            if error:
-                st.error(error)
-
-            else:
-                st.session_state.voice_answers[
-                    current_field["key"]
-                ] = normalize_response(
-                    transcript,
-                    current_field,
-                )
-
-                if current_step == total_fields - 1:
-                    st.session_state.voice_stage = "review"
-
-                else:
-                    target_step = current_step + 1
-                    st.session_state.voice_step = target_step
-                    prepare_step_transcript(target_step)
-
-                st.rerun()
+            st.rerun()
 
         if skip_clicked:
             st.session_state.voice_answers[
-                current_field["key"]
+                field["key"]
             ] = ""
 
-            if current_step < total_fields - 1:
-                target_step = current_step + 1
+            target_step = step + 1
+
+            if target_step < total:
                 st.session_state.voice_step = target_step
-                prepare_step_transcript(target_step)
+                prepare_step_transcript(
+                    target_step
+                )
 
             st.rerun()
 
-        st.markdown("")
-
-        if st.button(
-            "Discard and Start Again",
-            use_container_width=True,
-            key=f"voice_reset_{current_step}",
-        ):
+        if restart_clicked:
             reset_voice_workflow()
             st.rerun()
 
@@ -682,73 +869,215 @@ def render_review_screen() -> None:
         text=f"All {len(VOICE_FIELDS)} fields completed",
     )
 
-    st.markdown("## Review Captured Incident")
-
+    st.markdown("## Final Review")
     st.caption(
-        "Review the confirmed responses before the editable final-review and "
-        "classification stage is connected."
+        "Review and edit all captured details before classification."
     )
 
-    review_rows = []
+    edited_values: Dict[str, str] = {}
 
-    for field in VOICE_FIELDS:
-        value = st.session_state.voice_answers.get(
-            field["key"],
-            "",
+    with st.form(
+        "voice_final_review_form",
+    ):
+        review_columns = st.columns(
+            2,
+            gap="large",
         )
 
-        review_rows.append(
-            {
-                "Field": field["label"],
-                "Response": (
-                    value
-                    if str(value).strip()
-                    else "Skipped"
-                ),
-            }
+        for index, field in enumerate(
+            VOICE_FIELDS
+        ):
+            current_value = str(
+                st.session_state.voice_answers.get(
+                    field["key"],
+                    "",
+                )
+            )
+
+            with review_columns[
+                index % 2
+            ]:
+                if field["type"] == "narrative":
+                    edited_value = st.text_area(
+                        str(field["label"]),
+                        value=current_value,
+                        height=170,
+                    )
+                elif field["type"] == "yes_no":
+                    options = [
+                        "",
+                        "Yes",
+                        "No",
+                    ]
+                    edited_value = st.selectbox(
+                        str(field["label"]),
+                        options=options,
+                        index=(
+                            options.index(
+                                current_value
+                            )
+                            if current_value in options
+                            else 0
+                        ),
+                    )
+                elif field["type"] == "federal_state":
+                    options = [
+                        "",
+                        "Federal",
+                        "State",
+                    ]
+                    edited_value = st.selectbox(
+                        str(field["label"]),
+                        options=options,
+                        index=(
+                            options.index(
+                                current_value
+                            )
+                            if current_value in options
+                            else 0
+                        ),
+                    )
+                else:
+                    edited_value = st.text_input(
+                        str(field["label"]),
+                        value=current_value,
+                    )
+
+                edited_values[
+                    str(field["key"])
+                ] = edited_value
+
+        submit_review = st.form_submit_button(
+            "Classify Voice Incident",
+            type="primary",
+            use_container_width=True,
         )
 
-    st.dataframe(
-        review_rows,
-        hide_index=True,
-        use_container_width=True,
-    )
-
-    st.success(
-        "Voice capture and speech-to-text are complete. "
-        "The next step will connect editable final review, classification "
-        "and report downloads."
-    )
-
-    control_columns = st.columns(
+    action_columns = st.columns(
         2,
         gap="medium",
     )
 
-    with control_columns[0]:
+    with action_columns[0]:
         if st.button(
-            "← Return to Last Field",
+            "← Return to Last Question",
             use_container_width=True,
         ):
-            target_step = len(VOICE_FIELDS) - 1
+            target_step = len(
+                VOICE_FIELDS
+            ) - 1
+
             st.session_state.voice_stage = "capture"
             st.session_state.voice_step = target_step
-            prepare_step_transcript(target_step)
+            prepare_step_transcript(
+                target_step
+            )
             st.rerun()
 
-    with control_columns[1]:
+    with action_columns[1]:
         if st.button(
-            "Start New Voice Report",
-            type="primary",
+            "Discard and Start New",
             use_container_width=True,
         ):
             reset_voice_workflow()
             st.rerun()
 
+    if submit_review:
+        normalized_answers: Dict[str, str] = {}
+        errors: List[str] = []
 
-# ==============================================================================
-# Main page
-# ==============================================================================
+        for field in VOICE_FIELDS:
+            normalized_value, error = validate_response(
+                str(
+                    edited_values.get(
+                        str(field["key"]),
+                        "",
+                    )
+                ),
+                field,
+            )
+
+            normalized_answers[
+                str(field["key"])
+            ] = normalized_value
+
+            if error:
+                errors.append(
+                    f"{field['label']}: {error}"
+                )
+
+        if errors:
+            for error in errors:
+                st.error(
+                    error
+                )
+        else:
+            st.session_state.voice_answers = (
+                normalized_answers
+            )
+            st.session_state.voice_stage = "classify"
+            st.rerun()
+
+
+def render_classification_results() -> None:
+    if st.session_state.voice_prediction is None:
+        try:
+            with st.spinner(
+                "Loading the model and classifying the voice incident..."
+            ):
+                predictor = load_predictor()
+
+                prediction = predictor.predict(
+                    narrative=st.session_state.voice_answers[
+                        "Final Narrative"
+                    ],
+                    include_top_predictions=True,
+                    top_k=3,
+                )
+
+                report_package = generate_report(
+                    incident_details=st.session_state.voice_answers,
+                    prediction_result=prediction,
+                )
+
+                if not st.session_state.voice_saved:
+                    save_incident_record(
+                        report_package
+                    )
+                    st.session_state.voice_saved = True
+
+                st.session_state.voice_prediction = prediction
+                st.session_state.voice_report_package = report_package
+
+        except Exception as error:
+            st.exception(
+                error
+            )
+
+            if st.button(
+                "Return to Final Review",
+                use_container_width=True,
+            ):
+                st.session_state.voice_stage = "review"
+                st.rerun()
+
+            return
+
+    render_prediction_results(
+        st.session_state.voice_prediction,
+        st.session_state.voice_report_package,
+    )
+
+    st.markdown("")
+
+    if st.button(
+        "Start New Voice Report",
+        type="primary",
+        use_container_width=True,
+    ):
+        reset_voice_workflow()
+        st.rerun()
+
 
 def render() -> None:
     initialize_voice_state()
@@ -789,7 +1118,7 @@ def render() -> None:
         ],
         note=(
             "Use the microphone attached to your device for clearer recording "
-            "input, speak clearly in a quiet environment, and review the "
+            "input, speak clearly in a quiet environment, and review each "
             "transcript before proceeding."
         ),
     )
@@ -806,6 +1135,9 @@ def render() -> None:
 
     elif stage == "review":
         render_review_screen()
+
+    elif stage == "classify":
+        render_classification_results()
 
     else:
         reset_voice_workflow()
