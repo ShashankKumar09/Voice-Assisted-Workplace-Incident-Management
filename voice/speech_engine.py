@@ -155,8 +155,13 @@ class SpeechRecognitionEngine:
         self,
         audio_bytes: bytes,
         language: str = "en",
+        prompt: str | None = None,
     ) -> Dict[str, Any]:
-        """Clean and transcribe a WAV recording supplied as bytes."""
+        """Clean and transcribe a WAV recording supplied as bytes.
+
+        ``prompt`` supplies field-specific context to Whisper without changing
+        the returned transcript format.
+        """
 
         if not audio_bytes:
             raise ValueError(
@@ -199,6 +204,7 @@ class SpeechRecognitionEngine:
                 },
                 condition_on_previous_text=False,
                 word_timestamps=False,
+                initial_prompt=prompt or None,
             )
 
             transcript_parts = []
@@ -259,6 +265,7 @@ class SpeechRecognitionEngine:
                     3,
                 ),
                 "model_size": self.model_size,
+                "prompt_used": bool(prompt),
             }
 
         finally:
