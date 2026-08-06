@@ -405,6 +405,15 @@ def normalize_spoken_code(
     if not normalized or recognized == 0:
         return value.strip()
 
+    # Whisper frequently inserts punctuation between dictated digits even when
+    # the speaker did not say a separator (for example ``9-311-7-6``). When an
+    # identifier contains digits and separators only, remove those artificial
+    # separators. Genuine alphanumeric identifiers such as ``UPA-2501`` retain
+    # their separator because letters are present.
+    if re.fullmatch(r"[0-9._/-]+", normalized):
+        compact_digits = re.sub(r"[^0-9]", "", normalized)
+        return compact_digits if compact_digits else normalized
+
     return normalized
 
 
