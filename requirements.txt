@@ -10,3 +10,10 @@ reportlab>=4.2,<6
 openpyxl>=3.1,<4
 python-dateutil>=2.9,<3
 plotly>=5.24,<7
+
+# Voice
+faster-whisper
+ctranslate2
+av
+soundfile
+noisereduce
