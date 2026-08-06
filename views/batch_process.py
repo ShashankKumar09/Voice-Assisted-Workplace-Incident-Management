@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import io
 from pathlib import Path
+from typing import Dict, Any
 
 import pandas as pd
 import streamlit as st
@@ -18,6 +19,7 @@ from views.manual_report import load_predictor
 
 
 APP_ROOT = Path(__file__).resolve().parents[1]
+INCIDENT_DATA_PATH = APP_ROOT / "data" / "incident_records.csv"
 TEMPLATE_COLUMNS = [
     "ID", "UPA", "EventDate", "Employer", "Address1", "Address2",
     "City", "State", "Zip", "Latitude", "Longitude", "Primary NAICS",
@@ -42,6 +44,74 @@ def _excel_template_bytes() -> bytes:
     return buffer.getvalue()
 
 
+def _save_batch_records(result: Dict[str, Any]) -> int:
+    """Save successfully classified batch rows to the shared analytics store.
+
+    Existing records with the same non-empty Incident ID are replaced, preventing
+    duplicate dashboard entries when the same batch is processed more than once.
+    """
+    output_df = result.get("output_dataframe", pd.DataFrame()).copy()
+    if output_df.empty:
+        return 0
+
+    # A classified row has a completed decision and at least one mapped title.
+    decision_mask = (
+        output_df.get("Decision", pd.Series("", index=output_df.index))
+        .fillna("")
+        .astype(str)
+        .str.strip()
+        .ne("")
+    )
+    title_columns = [
+        column
+        for column in [
+            "NatureTitle",
+            "Part of Body Title",
+            "EventTitle",
+            "SourceTitle",
+        ]
+        if column in output_df.columns
+    ]
+    if title_columns:
+        title_mask = output_df[title_columns].fillna("").astype(str).apply(
+            lambda row: any(value.strip() for value in row), axis=1
+        )
+        save_df = output_df.loc[decision_mask & title_mask].copy()
+    else:
+        save_df = output_df.loc[decision_mask].copy()
+
+    if save_df.empty:
+        return 0
+
+    INCIDENT_DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if INCIDENT_DATA_PATH.is_file():
+        try:
+            existing_df = pd.read_csv(INCIDENT_DATA_PATH, low_memory=False)
+        except Exception:
+            existing_df = pd.DataFrame()
+    else:
+        existing_df = pd.DataFrame()
+
+    if "ID" in save_df.columns:
+        save_df["ID"] = save_df["ID"].fillna("").astype(str).str.strip()
+        non_empty_ids = set(save_df.loc[save_df["ID"].ne(""), "ID"])
+        if (
+            not existing_df.empty
+            and "ID" in existing_df.columns
+            and non_empty_ids
+        ):
+            existing_ids = existing_df["ID"].fillna("").astype(str).str.strip()
+            existing_df = existing_df.loc[~existing_ids.isin(non_empty_ids)].copy()
+
+    combined_df = pd.concat(
+        [existing_df, save_df],
+        ignore_index=True,
+        sort=False,
+    )
+    combined_df.to_csv(INCIDENT_DATA_PATH, index=False)
+    return len(save_df)
+
+
 def render() -> None:
     render_module_header(
         eyebrow="Bulk Incident Processing",
@@ -64,7 +134,8 @@ def render() -> None:
         ],
         note=(
             "ID and Final Narrative are required. Latitude, Longitude, dates and "
-            "Yes/No fields are validated automatically."
+            "Yes/No fields are validated automatically. Successfully classified "
+            "records are also added to Safety Analytics."
         ),
     )
 
@@ -153,7 +224,8 @@ def render() -> None:
     )
     st.caption(
         "Output columns include Nature, NatureTitle, Part of Body, Event, Source, "
-        "confidence scores and Decision."
+        "confidence scores and Decision. Successfully classified rows will be "
+        "available in Safety Analytics."
     )
 
     if st.button(
@@ -168,6 +240,8 @@ def render() -> None:
                     validator=validator,
                 )
                 result = classifier.classify(uploaded_df, continue_on_error=True)
+                saved_records = _save_batch_records(result)
+                result["analytics_saved_records"] = saved_records
             st.session_state.batch_result = result
         except Exception as error:
             st.exception(error)
@@ -191,6 +265,14 @@ def render() -> None:
         st.warning("The batch completed with some validation or classification failures.")
     else:
         st.error("The batch could not be classified.")
+
+    saved_records = int(result.get("analytics_saved_records", 0))
+    if saved_records:
+        st.success(
+            f"{saved_records} classified batch record(s) were added to Safety Analytics."
+        )
+    else:
+        st.info("No new classified records were added to Safety Analytics.")
 
     st.dataframe(processing_summary, use_container_width=True, hide_index=True)
     st.dataframe(output_df, use_container_width=True, hide_index=True)
