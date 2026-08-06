@@ -33,6 +33,24 @@ CONFIDENCE_COLUMNS = [
     "Source Confidence (%)",
 ]
 
+# Branded dashboard palette. Each analytical area has its own accent while
+# remaining consistent with the navy/teal application theme.
+CHART_COLORS = {
+    "trend": "#247D94",
+    "nature": "#2A9D8F",
+    "body": "#5B7DB1",
+    "event": "#E09F3E",
+    "source": "#8F6BB3",
+    "confidence": "#2F9EAA",
+    "employer": "#D66A5E",
+    "state": "#4C956C",
+}
+DECISION_COLORS = {
+    "Auto Fill": "#2A9D8F",
+    "Suggest Review": "#E9C46A",
+    "Manual Review": "#E76F51",
+}
+
 
 def _clean_text(series: pd.Series) -> pd.Series:
     return series.fillna("").astype(str).str.strip()
@@ -123,6 +141,28 @@ def _distribution(dataframe: pd.DataFrame, column: str, top_n: int = 10) -> pd.D
     )
 
 
+def _style_chart(fig, height: int) -> None:
+    """Apply a consistent polished appearance to Plotly charts."""
+    fig.update_layout(
+        margin=dict(l=10, r=10, t=55, b=10),
+        height=height,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(247,250,252,0.75)",
+        font=dict(color="#526B7C"),
+        title_font=dict(color="#17324D", size=16),
+        legend_title_text="",
+    )
+    fig.update_xaxes(
+        gridcolor="#E3EBF0",
+        linecolor="#D5E1E8",
+        zerolinecolor="#D5E1E8",
+    )
+    fig.update_yaxes(
+        gridcolor="rgba(227,235,240,0.45)",
+        linecolor="#D5E1E8",
+    )
+
+
 def _excel_bytes(dataframe: pd.DataFrame) -> bytes:
     export_df = dataframe.drop(
         columns=["EventDate Parsed", "Month"], errors="ignore"
@@ -175,7 +215,7 @@ def render() -> None:
 
     render_dashboard_overview(
         description=(
-            "This dashboard converts completed manual and voice incident reports "
+            "This dashboard converts completed manual, voice and batch incident reports "
             "into management-ready safety insights. All charts respond to the filters below."
         ),
         capabilities=[
@@ -191,8 +231,8 @@ def render() -> None:
     dataframe = _load_records()
     if dataframe.empty:
         st.info(
-            "No completed incident records are available yet. Submit a Manual or "
-            "Voice report first; the saved records will appear here automatically."
+            "No completed incident records are available yet. Submit a Manual, Voice "
+            "or Batch report first; saved records will appear here automatically."
         )
         return
 
@@ -284,10 +324,15 @@ def render() -> None:
             st.info("No valid event dates are available for the trend chart.")
         else:
             fig = px.line(
-                trend, x="Month", y="Incident Count", markers=True,
+                trend,
+                x="Month",
+                y="Incident Count",
+                markers=True,
                 title="Monthly Incident Trend",
+                color_discrete_sequence=[CHART_COLORS["trend"]],
             )
-            fig.update_layout(margin=dict(l=10, r=10, t=55, b=10), height=360)
+            fig.update_traces(line=dict(width=4), marker=dict(size=9))
+            _style_chart(fig, 360)
             st.plotly_chart(fig, use_container_width=True)
 
     with right:
@@ -296,10 +341,16 @@ def render() -> None:
             st.info("No decision values are available.")
         else:
             fig = px.pie(
-                decision_df, names="Decision", values="Incident Count",
-                hole=0.52, title="Decision Tier Distribution",
+                decision_df,
+                names="Decision",
+                values="Incident Count",
+                hole=0.52,
+                title="Decision Tier Distribution",
+                color="Decision",
+                color_discrete_map=DECISION_COLORS,
             )
-            fig.update_layout(margin=dict(l=10, r=10, t=55, b=10), height=360)
+            fig.update_traces(textposition="inside", textinfo="percent+label")
+            _style_chart(fig, 360)
             st.plotly_chart(fig, use_container_width=True)
 
     render_section_header(
@@ -309,28 +360,36 @@ def render() -> None:
     )
 
     chart_pairs = [
-        ("NatureTitle", "Top Nature of Injury Classifications"),
-        ("Part of Body Title", "Top Part of Body Classifications"),
-        ("EventTitle", "Top Event Classifications"),
-        ("SourceTitle", "Top Source Classifications"),
+        ("NatureTitle", "Top Nature of Injury Classifications", CHART_COLORS["nature"]),
+        ("Part of Body Title", "Top Part of Body Classifications", CHART_COLORS["body"]),
+        ("EventTitle", "Top Event Classifications", CHART_COLORS["event"]),
+        ("SourceTitle", "Top Source Classifications", CHART_COLORS["source"]),
     ]
     for index in range(0, len(chart_pairs), 2):
         columns = st.columns(2, gap="large")
-        for container, (column, title) in zip(columns, chart_pairs[index:index + 2]):
+        for container, (column, title, chart_color) in zip(
+            columns, chart_pairs[index:index + 2]
+        ):
             with container:
                 dist = _distribution(filtered, column, 10).sort_values("Incident Count")
                 if dist.empty:
                     st.info(f"No {column} values are available.")
                 else:
                     fig = px.bar(
-                        dist, x="Incident Count", y=column,
-                        orientation="h", title=title,
+                        dist,
+                        x="Incident Count",
+                        y=column,
+                        orientation="h",
+                        title=title,
+                        color_discrete_sequence=[chart_color],
                     )
-                    fig.update_layout(
-                        margin=dict(l=10, r=10, t=55, b=10),
-                        height=410,
-                        yaxis_title="",
+                    fig.update_traces(
+                        marker_line_color="rgba(255,255,255,0.7)",
+                        marker_line_width=0.6,
+                        hovertemplate="%{y}<br>Incidents: %{x}<extra></extra>",
                     )
+                    _style_chart(fig, 410)
+                    fig.update_layout(yaxis_title="")
                     st.plotly_chart(fig, use_container_width=True)
 
     render_section_header(
@@ -346,10 +405,13 @@ def render() -> None:
             st.info("No confidence values are available.")
         else:
             fig = px.histogram(
-                confidence_values.to_frame(), x="Overall Confidence (%)",
-                nbins=12, title="Confidence Distribution",
+                confidence_values.to_frame(),
+                x="Overall Confidence (%)",
+                nbins=12,
+                title="Confidence Distribution",
+                color_discrete_sequence=[CHART_COLORS["confidence"]],
             )
-            fig.update_layout(margin=dict(l=10, r=10, t=55, b=10), height=350)
+            _style_chart(fig, 350)
             st.plotly_chart(fig, use_container_width=True)
     with c2:
         employer_df = _distribution(filtered, "Employer", 10).sort_values("Incident Count")
@@ -357,10 +419,15 @@ def render() -> None:
             st.info("No employer values are available.")
         else:
             fig = px.bar(
-                employer_df, x="Incident Count", y="Employer",
-                orientation="h", title="Incidents by Employer",
+                employer_df,
+                x="Incident Count",
+                y="Employer",
+                orientation="h",
+                title="Incidents by Employer",
+                color_discrete_sequence=[CHART_COLORS["employer"]],
             )
-            fig.update_layout(margin=dict(l=10, r=10, t=55, b=10), height=350, yaxis_title="")
+            _style_chart(fig, 350)
+            fig.update_layout(yaxis_title="")
             st.plotly_chart(fig, use_container_width=True)
     with c3:
         state_df = _distribution(filtered, "State", 10).sort_values("Incident Count")
@@ -368,10 +435,15 @@ def render() -> None:
             st.info("No state values are available.")
         else:
             fig = px.bar(
-                state_df, x="Incident Count", y="State",
-                orientation="h", title="Incidents by State",
+                state_df,
+                x="Incident Count",
+                y="State",
+                orientation="h",
+                title="Incidents by State",
+                color_discrete_sequence=[CHART_COLORS["state"]],
             )
-            fig.update_layout(margin=dict(l=10, r=10, t=55, b=10), height=350, yaxis_title="")
+            _style_chart(fig, 350)
+            fig.update_layout(yaxis_title="")
             st.plotly_chart(fig, use_container_width=True)
 
     render_section_header(
@@ -389,8 +461,10 @@ def render() -> None:
         ] if column in filtered.columns
     ]
     st.dataframe(
-        filtered[display_columns], use_container_width=True,
-        hide_index=True, height=360,
+        filtered[display_columns],
+        use_container_width=True,
+        hide_index=True,
+        height=360,
     )
 
     export_df = filtered.drop(columns=["EventDate Parsed", "Month"], errors="ignore")
