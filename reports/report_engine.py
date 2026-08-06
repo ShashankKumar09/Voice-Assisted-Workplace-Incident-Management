@@ -105,7 +105,6 @@ def build_flat_record(
     prediction_result: Dict[str, Any],
     reporting_channel: str,
 ) -> Dict[str, Any]:
-    """Build a user-facing record with OSHA fields only."""
     enrich_prediction_result(prediction_result)
     record = {
         field: _clean(incident_details.get(field, ""))
@@ -181,6 +180,7 @@ def generate_pdf(
         ("Event Date", "EventDate"), ("Employer", "Employer"),
         ("Address", "Address1"), ("City", "City"),
         ("State", "State"), ("ZIP / Postal Code", "Zip"),
+        ("Latitude", "Latitude"), ("Longitude", "Longitude"),
         ("Primary NAICS", "Primary NAICS"), ("Hospitalized", "Hospitalized"),
         ("Amputation", "Amputation"), ("Loss of Eye", "Loss of Eye"),
         ("Inspection", "Inspection"), ("Federal / State", "FederalState"),
