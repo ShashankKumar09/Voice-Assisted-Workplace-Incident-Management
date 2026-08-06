@@ -13,17 +13,21 @@ import soundfile as sf
 from faster_whisper import WhisperModel
 
 
+DIGIT_WORDS = {
+    "zero": "0", "oh": "0", "o": "0",
+    "one": "1", "two": "2", "to": "2", "too": "2",
+    "three": "3", "four": "4", "for": "4",
+    "five": "5", "six": "6", "seven": "7",
+    "eight": "8", "ate": "8", "nine": "9",
+}
+
+
 class SpeechRecognitionEngine:
     """Transcribe Streamlit microphone recordings with faster-whisper."""
 
     SHORT_FIELD_TYPES = {
-        "identifier",
-        "digits",
-        "latitude",
-        "longitude",
-        "date",
-        "yes_no",
-        "federal_state",
+        "identifier", "digits", "latitude", "longitude",
+        "date", "yes_no", "federal_state",
     }
 
     def __init__(
@@ -56,7 +60,7 @@ class SpeechRecognitionEngine:
             audio_array = np.mean(audio_array, axis=1, dtype=np.float32)
 
         audio_array = np.nan_to_num(audio_array, nan=0.0, posinf=0.0, neginf=0.0)
-        audio_array = audio_array - float(np.mean(audio_array))
+        audio_array -= float(np.mean(audio_array))
         duration_seconds = len(audio_array) / float(sample_rate)
 
         if duration_seconds < 0.35:
@@ -84,24 +88,17 @@ class SpeechRecognitionEngine:
                     audio_array = reduced
                     noise_reduction_applied = True
         except Exception:
-            noise_reduction_applied = False
+            pass
 
         peak = float(np.max(np.abs(audio_array)))
         if peak > 0:
             audio_array = np.clip(audio_array * (0.88 / peak), -1.0, 1.0)
 
-        sf.write(
-            output_path,
-            audio_array.astype(np.float32),
-            sample_rate,
-            subtype="PCM_16",
-        )
+        sf.write(output_path, audio_array.astype(np.float32), sample_rate, subtype="PCM_16")
         return {
             "sample_rate": int(sample_rate),
             "duration_seconds": float(duration_seconds),
             "noise_reduction_applied": noise_reduction_applied,
-            "input_peak": peak_before,
-            "input_rms": rms,
         }
 
     def _transcribe_path(
@@ -111,24 +108,19 @@ class SpeechRecognitionEngine:
         language: str,
         prompt: str | None,
         field_type: str,
-        use_vad: bool,
     ) -> Tuple[str, Any, float]:
         short_field = field_type in self.SHORT_FIELD_TYPES
         segments, information = self.model.transcribe(
             path,
             language=language,
-            beam_size=5 if short_field else 5,
+            beam_size=5,
             best_of=5,
             temperature=0.0,
-            vad_filter=use_vad,
-            vad_parameters=(
-                {
-                    "min_silence_duration_ms": 350,
-                    "speech_pad_ms": 250,
-                }
-                if use_vad
-                else None
-            ),
+            vad_filter=True,
+            vad_parameters={
+                "min_silence_duration_ms": 350,
+                "speech_pad_ms": 250,
+            },
             condition_on_previous_text=False,
             word_timestamps=False,
             initial_prompt=prompt or None,
@@ -149,26 +141,80 @@ class SpeechRecognitionEngine:
 
         transcript = " ".join(parts).strip()
         avg_logprob = sum(log_probs) / len(log_probs) if log_probs else -10.0
-        avg_no_speech = (
-            sum(no_speech_probs) / len(no_speech_probs)
-            if no_speech_probs
-            else 1.0
-        )
+        avg_no_speech = sum(no_speech_probs) / len(no_speech_probs) if no_speech_probs else 1.0
         return transcript, information, avg_logprob - avg_no_speech
 
     @staticmethod
     def _is_repetitive(text: str) -> bool:
         compact = re.sub(r"\s+", "", text.lower())
-        if not compact:
-            return False
         if re.search(r"(.{1,8})\1{4,}", compact):
             return True
-        characters = [char for char in compact if char.isalnum()]
-        if len(characters) >= 25:
-            most_common = max(characters.count(char) for char in set(characters))
-            if most_common / len(characters) > 0.55:
-                return True
+        chars = [char for char in compact if char.isalnum()]
+        if len(chars) >= 25:
+            most_common = max(chars.count(char) for char in set(chars))
+            return most_common / len(chars) > 0.55
         return False
+
+    @staticmethod
+    def _tokens(value: str) -> List[str]:
+        cleaned = value.lower().strip()
+        cleaned = (
+            cleaned.replace("–", "-")
+            .replace("—", "-")
+            .replace("−", "-")
+        )
+        return re.findall(r"[a-z]+|\d+|[-_/.]", cleaned)
+
+    @classmethod
+    def _normalize_short_value(cls, value: str, field_type: str) -> str:
+        tokens = cls._tokens(value)
+        output: List[str] = []
+        index = 0
+
+        while index < len(tokens):
+            token = tokens[index]
+            if token in {"double", "triple"}:
+                repeat_count = 2 if token == "double" else 3
+                next_index = index + 1
+                while next_index < len(tokens) and tokens[next_index] in {"-", "_", "/"}:
+                    next_index += 1
+                if next_index < len(tokens):
+                    next_token = tokens[next_index]
+                    digit = DIGIT_WORDS.get(next_token)
+                    if digit is None and next_token.isdigit() and len(next_token) == 1:
+                        digit = next_token
+                    if digit is not None:
+                        output.append(digit * repeat_count)
+                        index = next_index + 1
+                        continue
+
+            if token in DIGIT_WORDS:
+                output.append(DIGIT_WORDS[token])
+            elif token.isdigit():
+                output.append(token)
+            elif token in {"point", "dot", "."}:
+                output.append(".")
+            elif token in {"minus", "negative", "-"}:
+                if field_type in {"latitude", "longitude"} and not output:
+                    output.append("-")
+                elif field_type == "identifier":
+                    output.append("-")
+            elif token in {"_", "/"} and field_type == "identifier":
+                output.append(token)
+            elif field_type == "identifier" and token.isalpha():
+                output.append(token.upper())
+            index += 1
+
+        normalized = "".join(output)
+        if field_type == "digits":
+            return re.sub(r"\D", "", normalized)
+        if field_type in {"latitude", "longitude"}:
+            normalized = re.sub(r"(?!^)-", "", normalized)
+            normalized = re.sub(r"\.(?=.*\.)", "", normalized)
+            return normalized
+        if field_type == "identifier" and re.fullmatch(r"[0-9._/-]+", normalized):
+            return re.sub(r"\D", "", normalized)
+        return normalized or value.strip()
 
     @classmethod
     def _validate_candidate(
@@ -181,20 +227,23 @@ class SpeechRecognitionEngine:
         if not value or cls._is_repetitive(value):
             return False
 
-        compact = re.sub(r"\s+", "", value)
+        normalized = cls._normalize_short_value(value, field_type)
+        compact = re.sub(r"\s+", "", normalized)
         if field_type in cls.SHORT_FIELD_TYPES:
-            maximum_length = max(24, int(duration_seconds * 12))
-            if len(compact) > maximum_length:
+            if len(compact) > max(24, int(duration_seconds * 12)):
                 return False
 
         if field_type == "identifier":
-            useful = re.sub(r"[^A-Za-z0-9-]", "", value)
-            return 1 <= len(useful) <= 24
+            return 1 <= len(re.sub(r"[^A-Za-z0-9_-]", "", normalized)) <= 24
         if field_type == "digits":
-            digits = re.sub(r"\D", "", value)
-            return 1 <= len(digits) <= 12
+            return 1 <= len(re.sub(r"\D", "", normalized)) <= 12
         if field_type in {"latitude", "longitude"}:
-            return bool(re.search(r"\d", value)) and len(compact) <= 20
+            try:
+                numeric = float(normalized)
+            except ValueError:
+                return False
+            minimum, maximum = (-90.0, 90.0) if field_type == "latitude" else (-180.0, 180.0)
+            return minimum <= numeric <= maximum
         if field_type == "yes_no":
             return bool(re.search(r"\b(?:yes|yeah|yep|no|nope)\b", value.lower()))
         if field_type == "federal_state":
@@ -206,30 +255,15 @@ class SpeechRecognitionEngine:
     def _candidate_bonus(text: str, field_type: str) -> float:
         if not text:
             return -100.0
-        value = text.strip()
-        lower = value.lower().strip(" .,!?")
         bonus = 0.0
-
-        if field_type == "digits":
-            digit_count = len(re.findall(r"\d", value))
-            number_words = len(
-                re.findall(
-                    r"\b(?:zero|oh|one|two|three|four|five|six|seven|eight|nine|double|triple)\b",
-                    lower,
-                )
-            )
-            bonus += min(digit_count + number_words, 12) * 0.12
-        elif field_type == "identifier":
-            bonus += min(len(re.findall(r"[A-Za-z0-9]", value)), 16) * 0.06
-        elif field_type in {"latitude", "longitude"}:
-            bonus += 0.5 if re.search(r"\d", value) else 0.0
-            bonus += 0.35 if "." in value or "point" in lower else 0.0
+        if field_type in {"identifier", "digits", "latitude", "longitude"}:
+            bonus += min(len(re.findall(r"\d", text)), 12) * 0.10
         elif field_type == "yes_no":
-            bonus += 1.0 if re.search(r"\b(?:yes|yeah|yep|no|nope)\b", lower) else 0.0
+            bonus += 1.0 if re.search(r"\b(?:yes|no)\b", text.lower()) else 0.0
         elif field_type == "federal_state":
-            bonus += 1.0 if "federal" in lower or re.search(r"\bstate\b", lower) else 0.0
+            bonus += 1.0 if re.search(r"\b(?:federal|state)\b", text.lower()) else 0.0
         elif field_type == "narrative":
-            bonus += min(len(value.split()), 30) * 0.025
+            bonus += min(len(text.split()), 30) * 0.025
         return bonus
 
     def transcribe_bytes(
@@ -253,8 +287,7 @@ class SpeechRecognitionEngine:
             with tempfile.NamedTemporaryFile(suffix="_clean.wav", delete=False) as cleaned_file:
                 cleaned_path = cleaned_file.name
 
-            audio_metadata = self._prepare_audio(source_path, cleaned_path)
-            short_field = field_type in self.SHORT_FIELD_TYPES
+            metadata = self._prepare_audio(source_path, cleaned_path)
             candidates: List[Dict[str, Any]] = []
 
             for source_name, path in (("original", source_path), ("cleaned", cleaned_path)):
@@ -263,29 +296,29 @@ class SpeechRecognitionEngine:
                     language=language,
                     prompt=prompt,
                     field_type=field_type,
-                    use_vad=True,
                 )
-                if text and self._validate_candidate(
-                    text,
+                normalized_text = (
+                    self._normalize_short_value(text, field_type)
+                    if field_type in self.SHORT_FIELD_TYPES
+                    else text.strip()
+                )
+                if normalized_text and self._validate_candidate(
+                    normalized_text,
                     field_type,
-                    float(audio_metadata["duration_seconds"]),
+                    float(metadata["duration_seconds"]),
                 ):
                     candidates.append(
                         {
                             "source": source_name,
-                            "text": text,
+                            "text": normalized_text,
                             "information": information,
-                            "score": score + self._candidate_bonus(text, field_type),
+                            "score": score + self._candidate_bonus(normalized_text, field_type),
                         }
                     )
 
             if not candidates:
-                if short_field:
-                    raise ValueError(
-                        "The recording could not be recognized reliably. Please record again and speak each letter or digit slowly."
-                    )
                 raise ValueError(
-                    "No clear speech was detected. Please move closer to the microphone and record again."
+                    "The recording could not be recognized reliably. Please record again and speak slowly."
                 )
 
             best = max(candidates, key=lambda item: float(item["score"]))
@@ -304,12 +337,10 @@ class SpeechRecognitionEngine:
                     for item in candidates
                 ],
                 "language": getattr(information, "language", language),
-                "language_probability": float(
-                    getattr(information, "language_probability", 0.0)
-                ),
-                "audio_duration_seconds": float(audio_metadata["duration_seconds"]),
-                "sample_rate": int(audio_metadata["sample_rate"]),
-                "noise_reduction_applied": bool(audio_metadata["noise_reduction_applied"]),
+                "language_probability": float(getattr(information, "language_probability", 0.0)),
+                "audio_duration_seconds": float(metadata["duration_seconds"]),
+                "sample_rate": int(metadata["sample_rate"]),
+                "noise_reduction_applied": bool(metadata["noise_reduction_applied"]),
                 "transcription_time_seconds": round(time.perf_counter() - start_time, 3),
                 "model_size": self.model_size,
                 "field_type": field_type,
