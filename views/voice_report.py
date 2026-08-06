@@ -15,10 +15,9 @@ Complete guided workflow:
 
 from __future__ import annotations
 
-from datetime import datetime
+from hashlib import sha256
 from html import escape
-from pathlib import Path
-from typing import Any, Dict, List
+from typing import Dict, List
 
 import streamlit as st
 
@@ -551,10 +550,10 @@ def process_audio(
 
     audio_bytes = audio_value.getvalue()
 
-    signature = (
-        len(audio_bytes),
-        hash(audio_bytes[:1024]),
-    )
+    # Use a stable digest rather than Python's process-randomized hash().
+    # This reliably prevents the same recording from being transcribed again
+    # during Streamlit reruns.
+    signature = sha256(audio_bytes).hexdigest()
 
     signature_key = audio_signature_key(
         step
@@ -1040,14 +1039,19 @@ def render_classification_results() -> None:
                     prediction_result=prediction,
                 )
 
-                if not st.session_state.voice_saved:
-                    save_incident_record(
-                        report_package
-                    )
-                    st.session_state.voice_saved = True
-
+                # Store the generated result before persistence so a temporary
+                # incident-store failure does not discard a valid prediction.
                 st.session_state.voice_prediction = prediction
                 st.session_state.voice_report_package = report_package
+
+                if not st.session_state.voice_saved:
+                    try:
+                        save_incident_record(
+                            report_package
+                        )
+                        st.session_state.voice_saved = True
+                    except Exception as save_error:
+                        st.session_state.voice_save_error = str(save_error)
 
         except Exception as error:
             st.exception(
@@ -1067,6 +1071,16 @@ def render_classification_results() -> None:
         st.session_state.voice_prediction,
         st.session_state.voice_report_package,
     )
+
+    save_error = st.session_state.get(
+        "voice_save_error"
+    )
+    if save_error:
+        st.warning(
+            "The report was classified successfully, but it could not be "
+            "saved to the incident store."
+        )
+        st.caption(save_error)
 
     st.markdown("")
 
